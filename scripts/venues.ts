@@ -27,8 +27,13 @@ const SEED = 20260101;
 const CRYPTO = { annualVol: 0.42, cagr: 0.233, positionFraction: 0.93 };
 /** EURUSD proxy: ~10% annualised. The 6% case is the stress variant. */
 const FX = { annualVol: 0.1, stressVol: 0.06 };
-/** 0.01 lots = 1,000 units ≈ $1,160, fixed. The cost is $0.20 per round trip. */
-const MT5 = { notionalPerLot: 1_160, roundTripCost: 0.2, roundTripsPerYear: 12, marginFloor: 2.32 };
+/**
+ * 0.01 lots = 1,000 units ≈ $1,160, fixed, and that is the *minimum* order.
+ * Lots are counted in those minimum units: 1 means "the smallest position that
+ * exists", 3 means 0.03 lots.
+ */
+const MT5 = { notionalPerMinLot: 1_160, roundTripCost: 0.2, roundTripsPerYear: 12, marginFloor: 2.32 };
+const MIN_LOTS = 1;
 /** Both systems are in the market on the same share of days. */
 const EXPOSURE = 0.56;
 
@@ -39,7 +44,18 @@ interface Outcome {
   medianDeathDay: number | null;
   p10x: number;
   pDouble: number;
+  /** P(hit the $1/day bar: +$365 in a year, whatever the account size). */
+  pGoal: number;
+  /** Worst final equity, because a median hides the tail that ends accounts. */
+  worst: number;
 }
+
+/**
+ * The target is a fixed amount of money, not a multiple: $1/day for a year is
+ * +$365. On $10 that is 37.5x and effectively impossible; on $1,000 it is 1.37x.
+ * Expressing it as a multiple hides that the goal gets easier as equity grows.
+ */
+const GOAL_DOLLARS = 365;
 
 function simulate(
   startEquity: number,
@@ -56,11 +72,13 @@ function simulate(
   let deathDays = 0;
   let doubled = 0;
   let tenX = 0;
+  let goal = 0;
 
   for (let path = 0; path < PATHS; path++) {
     let equity = startEquity;
     let firstDeath: number | null = null;
     let peakDouble = false;
+    let hitGoal = false;
 
     for (let day = 0; day < DAYS && firstDeath === null; day++) {
       const inMarket = rand() < EXPOSURE;
@@ -71,9 +89,11 @@ function simulate(
       }
       if (equity <= 0) equity = 0;
       if (equity >= startEquity * 2) peakDouble = true;
+      if (equity >= startEquity + GOAL_DOLLARS) hitGoal = true;
       if (dead(equity)) firstDeath = day;
     }
 
+    if (hitGoal) goal++;
     if (firstDeath !== null) {
       deadCount++;
       deathDays += firstDeath;
@@ -95,6 +115,8 @@ function simulate(
     medianDeathDay: deadCount > 0 ? deathDays / deadCount : null,
     p10x: tenX / PATHS,
     pDouble: doubled / PATHS,
+    pGoal: goal / PATHS,
+    worst: finals[0] ?? 0,
   };
 }
 
@@ -115,7 +137,8 @@ function cryptoAt(equity: number): Outcome {
  * MT5 needs its own loop: the position is a fixed notional, so the shock is a
  * percentage of $1,160 and not of equity. That asymmetry is the whole point.
  */
-function mt5Sim(equity: number, fxVol = FX.annualVol, seed = SEED): Outcome {
+function mt5Sim(equity: number, fxVol = FX.annualVol, seed = SEED, lots = MIN_LOTS): Outcome {
+  const notional = lots * MT5.notionalPerMinLot;
   const rand = mulberry32(seed);
   const dailyVol = fxVol / Math.sqrt(DAYS);
   const costPerRoundTrip = MT5.roundTripCost;
@@ -124,26 +147,30 @@ function mt5Sim(equity: number, fxVol = FX.annualVol, seed = SEED): Outcome {
   let deathDays = 0;
   let tenX = 0;
   let doubled = 0;
+  let goal = 0;
 
   for (let path = 0; path < PATHS; path++) {
     let eq = equity;
     let firstDeath: number | null = null;
     let hitDouble = false;
+    let hitGoal = false;
     let trips = 0;
 
     for (let day = 0; day < DAYS && firstDeath === null; day++) {
       const inMarket = rand() < EXPOSURE;
       const shock = gaussian(rand);
       if (inMarket) {
-        eq += MT5.notionalPerLot * dailyVol * shock;
+        eq += notional * dailyVol * shock;
         trips++;
         if (trips % 21 === 0) eq -= costPerRoundTrip;
       }
       if (eq >= equity * 2) hitDouble = true;
+      if (eq >= equity + GOAL_DOLLARS) hitGoal = true;
       if (eq < MT5.marginFloor) firstDeath = day;
     }
 
     if (hitDouble) doubled++;
+    if (hitGoal) goal++;
     if (firstDeath !== null) {
       deadCount++;
       deathDays += firstDeath;
@@ -162,12 +189,23 @@ function mt5Sim(equity: number, fxVol = FX.annualVol, seed = SEED): Outcome {
     medianDeathDay: deadCount > 0 ? deathDays / deadCount : null,
     p10x: tenX / PATHS,
     pDouble: doubled / PATHS,
+    pGoal: goal / PATHS,
+    worst: finals[0] ?? 0,
   };
 }
 
+/**
+ * How far EURUSD has to move to end the account. No simulation, no assumptions
+ * about drift — just (equity - margin floor) / notional, expressed as a price
+ * move. This is the single number that explains the whole table.
+ */
+function ruinMovePct(equity: number, lots = MIN_LOTS): number {
+  return (equity - MT5.marginFloor) / (lots * MT5.notionalPerMinLot);
+}
+
 /** No simulation needed: one ordinary day, as a share of the account. */
-function oneSigma(equity: number, fxVol = FX.annualVol): number {
-  return (MT5.notionalPerLot * (fxVol / Math.sqrt(DAYS))) / equity;
+function oneSigma(equity: number, fxVol = FX.annualVol, lots = MIN_LOTS): number {
+  return (lots * MT5.notionalPerMinLot * (fxVol / Math.sqrt(DAYS))) / equity;
 }
 
 function money(x: number): string {
@@ -183,7 +221,7 @@ function main(): void {
   const start = Number.isFinite(equityArg) && equityArg > 0 ? equityArg : 10;
 
   console.log(`Venue comparison · ${PATHS.toLocaleString()} paths · ${DAYS} days · seed ${SEED}`);
-  console.log(`Exposure ${pct(EXPOSURE)} of days for both · FX ${pct(FX.annualVol)} annualised · 0.01 lot = ${money(MT5.notionalPerLot)}\n`);
+  console.log(`Exposure ${pct(EXPOSURE)} of days for both · FX ${pct(FX.annualVol)} annualised · 0.01 lot = ${money(MT5.notionalPerMinLot)}\n`);
 
   const crypto = cryptoAt(start);
   const mt5 = mt5Sim(start);
@@ -198,12 +236,23 @@ function main(): void {
   console.log(`P(10x)                    ${pct(crypto.p10x).padStart(11)}      ${pct(mt5.p10x).padStart(11)}`);
   console.log(`one ordinary day           ${pct(CRYPTO.annualVol / Math.sqrt(DAYS) * CRYPTO.positionFraction).padStart(11)}      ${pct(oneSigma(start)).padStart(11)}`);
 
+  console.log(`\nAt ${money(start)}, as multiples of the account:`);
+  const goalMultiple = 1 + GOAL_DOLLARS / start;
+  console.log(
+    `P(+$${GOAL_DOLLARS} in a year = ${goalMultiple.toFixed(2)}x)   crypto ${pct(crypto.pGoal).padStart(7)}   MT5 ${pct(mt5.pGoal).padStart(7)}`,
+  );
+  console.log(`worst path                        crypto ${money(crypto.worst).padStart(7)}   MT5 ${money(mt5.worst).padStart(7)}`);
+  console.log(
+    `account dies on a EURUSD move of  ${pct(ruinMovePct(start)).padStart(7)}` +
+      (ruinMovePct(start) < 0.03 ? "   <-- reachable in an ordinary week" : ""),
+  );
+
   console.log("\nThe same model at different account sizes — MT5 only:");
-  console.log("equity     leverage   1 sigma/day   P(dead in 1yr)   median      note");
+  console.log("equity     leverage   1 sigma/day   ends on move   P(dead in 1yr)   median      note");
   for (const eq of [10, 50, 100, 276, 500, 1160, 2320, 5000]) {
     const r = mt5Sim(eq, FX.annualVol, SEED + Math.round(eq));
     const sigma = oneSigma(eq);
-    const leverage = MT5.notionalPerLot / eq;
+    const leverage = MT5.notionalPerMinLot / eq;
     const note =
       sigma > 0.5
         ? "a quiet day can end the account"
@@ -213,7 +262,30 @@ function main(): void {
             ? "risk per day is spot-like"
             : "below the spot bot's daily risk";
     console.log(
-      `${money(eq).padStart(9)}  ${`${leverage.toFixed(1)}x`.padStart(9)}   ${pct(sigma).padStart(11)}    ${pct(r.deadRate).padStart(12)}   ${money(r.median).padStart(9)}   ${note}`,
+      `${money(eq).padStart(9)}  ${`${leverage.toFixed(1)}x`.padStart(9)}   ${pct(sigma).padStart(11)}    ${pct(ruinMovePct(eq)).padStart(11)}   ${pct(r.deadRate).padStart(12)}   ${money(r.median).padStart(9)}   ${note}`,
+    );
+  }
+
+  // The ceiling nobody mentions: 0.01 lots is a fixed $1,160 of notional, so a
+  // year of FX movement — even a whole standard deviation of it — is a bounded
+  // number of dollars. Growing the position means adding lots, which puts the
+  // ruin risk straight back.
+  const unscaled = mt5Sim(start);
+  console.log(
+    `\nWhat one lot can earn: 0.01 lots is ${money(MT5.notionalPerMinLot)}, so a year at ` +
+      `${pct(FX.annualVol)} vol moves it by about ${money(MT5.notionalPerMinLot * FX.annualVol * Math.sqrt(EXPOSURE))} ` +
+      `(1 sigma). Reaching +$${GOAL_DOLLARS} would need a ${pct(GOAL_DOLLARS / MT5.notionalPerMinLot)} ` +
+      `move in EURUSD — ${((GOAL_DOLLARS / MT5.notionalPerMinLot) / FX.annualVol).toFixed(1)} sigma of a whole year.` +
+      `\nP(goal) with one lot: ${pct(unscaled.pGoal)}. Not a strategy problem — an arithmetic one.`,
+  );
+
+  console.log("\nIf the position scaled with equity (one more minimum lot per $1,160, i.e. unlevered):");
+  console.log("equity      lots    1 sigma/day   P(+$365/yr)   P(dead)   median");
+  for (const eq of [276, 1_000, 3_650, 5_000, 10_000]) {
+    const lots = Math.max(MIN_LOTS, Math.floor(eq / MT5.notionalPerMinLot));
+    const r = mt5Sim(eq, FX.annualVol, SEED + Math.round(eq), lots);
+    console.log(
+      `${money(eq).padStart(9)}  ${(lots * 0.01).toFixed(2).padStart(6)}   ${pct(oneSigma(eq, FX.annualVol, lots)).padStart(11)}   ${pct(r.pGoal).padStart(12)}   ${pct(r.deadRate).padStart(7)}   ${money(r.median).padStart(9)}`,
     );
   }
 

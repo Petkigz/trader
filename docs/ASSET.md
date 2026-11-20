@@ -220,6 +220,49 @@ The rejection above is about $10, not about MT5. The same model, swept over acco
 | $1,160 | 1.0× | 0.6% | 0.0% | $1,157.16 | unlevered |
 | $5,000 | 0.2× | 0.1% | 0.0% | $5,000.04 | |
 
+### The $100 question, answered properly
+
+$100 is the first size where MT5 is not a guaranteed wipeout: ruin falls from 89.5% to **24.6%**,
+and the median year is roughly flat ($96.81). That is a real change of category, and it is fair to
+ask whether $100 makes MT5 work. Two measurements say no — but for different reasons than at $10.
+
+| At **$100** | Crypto spot | MT5 (0.01 lot) |
+|---|---|---|
+| Median after 1 year | **$108.21** | $96.81 |
+| Mean | **$112.91** | $99.45 |
+| P(account dead) | **0.0%** | **24.6%** |
+| Median day of death | — | day 145 |
+| P(doubled) | 3.0% | 22.7% |
+| P(10×) | 0.0% | 0.0% |
+| P(+$365 in a year) — the goal | **0.0%** | **0.0%** |
+| Worst path | $30.52 | **$0.00** |
+| Account is gone on a EURUSD move of | n/a | **8.4%** |
+
+**First reason: $1/day is unreachable with one lot, at any account size.** 0.01 lots is a fixed
+$1,160 of notional, so a year of EURUSD movement — a *whole standard deviation* of it — is about
+$87. Reaching +$365 needs a **31.5% move in EURUSD**, or 3.1σ of an entire year. That is not a
+strategy problem, it is arithmetic: the position cannot get big enough to matter, and making it
+bigger means adding lots, which puts the ruin risk straight back. Measured: P(+$365) with one lot
+is **0.0%** at $100, $276, $1,000 — and only becomes real when the position scales with equity:
+
+| Equity | Lots (min lots scale) | 1σ/day | P(+$365/yr) | P(dead) |
+|---|---|---|---|---|
+| $276 | 0.01 | 2.6% | 0.0% | 0.2% |
+| $1,000 | 0.01 | 0.7% | 0.0% | 0.0% |
+| **$3,650** | **0.03** | 0.6% | **14.6%** | 0.0% |
+| $5,000 | 0.04 | 0.6% | 27.5% | 0.0% |
+| $10,000 | 0.08 | 0.6% | 56.4% | 0.0% |
+
+$3,650 is where $1/day becomes attemptable — within $34 of the $3,684 the crypto analysis
+independently derived. Two different venues, two different models, the same answer, because the
+goal is a **return-on-capital** problem and not a venue problem.
+
+**Second reason: at $100 the ruin channel is still open.** The account dies on an 8.4% adverse
+EURUSD move. Monthly FX volatility is ~2.9%, so that is about 2.9σ monthly, and roughly a
+one-in-four chance over a year — which is exactly what the simulation reports (24.6%). That
+probability is a property of the leverage, not of the strategy: no stop-loss changes it, because
+the stop is the margin floor.
+
 **$276 is the threshold.** Not because the strategy improves — it does not — but because at
 that equity one ordinary EURUSD day costs 2.6% of the account, the same as the spot bot, and
 the margin floor is no longer reachable by weather. Below $100 you are not trading an edge,
