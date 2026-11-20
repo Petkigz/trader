@@ -74,6 +74,20 @@ $10 is not a small account, it is a *structurally different* account, and three 
 
 Total profit over 8.7 years: **about $52**, or roughly **$6/year**. That is what $10 does. The bot is not the money — it is the machine. Point it at $1,000 and the same 23% CAGR is ~$230/year with the same code and the same risk controls.
 
+Put per-day, the number is the one worth internalising before you deploy:
+
+| Period | Expected return on $10 |
+|---|---|
+| Per year | $2.33 |
+| Per month | $0.19 |
+| Per week | $0.045 |
+| **Per day** | **$0.0064 — two-thirds of a cent** |
+| Per day *in market* | $0.011 |
+
+**Do not read that as "it earns a fraction of a cent every day".** It does not. The bot is in cash 44% of the time and trades about 4 times a year, so the honest day-by-day answer is: **most days $0.00, in long unbroken stretches, then a jump of a few dollars when a trade closes.** There is no daily grind to watch, and any dashboard that suggests otherwise is noise. A single round trip costs $0.019 — about **3.4 days** of average return — which is why the strategy shops for four big moves a year instead of many small ones.
+
+This is also why the bot can be genuinely unattended: there is nothing to react to on a day-to-day basis. If you find yourself checking it daily, you will be watching nothing happen, and that is the design working as intended.
+
 ### What would actually break it
 
 - The exchange delisting the pair, or exiting your country

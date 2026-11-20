@@ -141,9 +141,58 @@ them.
 
 ---
 
-## 3. What would change this answer
+## 3. Rejected: MetaTrader 5 at this size
 
-- **Capital above ~$2,000.** The BNB discount and maker-order strategies start to pay
+MT5 is a *platform*, not a venue — you still choose a broker. It is a reasonable target
+eventually and a bad one at $10, for three structural reasons rather than any failure
+of MT5 itself.
+
+**The minimum lot forces leverage.** Every broker's smallest order is 0.01 lots. On
+EURUSD that is 1,000 units ≈ **$1,160 notional**, needing only ~$2.32 of margin at
+1:500. On a $10 account that is **116× effective leverage**, and it is not optional —
+you cannot trade smaller. The consequences, on the smallest position that exists:
+
+| EURUSD move | P&L on 0.01 lot | as % of a $10 account |
+|---|---|---|
+| 0.3% | $3.48 | **34.8%** |
+| 0.6% (a quiet day) | $6.96 | **69.6%** |
+| 1.0% (an ordinary day) | $11.60 | **116% — account gone** |
+
+Compare the spot bot, which is unlevered: a $9.27 position moving 2% (BTC's measured
+daily vol) is 1.8% of the account. Spot cannot be liquidated because there is no
+borrowing; MT5 at $10 will be, eventually, on a day that is not even unusual.
+
+**The cost per round trip is ~10× worse.** Standard/micro accounts — the only tier
+that accepts a $10 deposit — quote spreads from 0.7–1.2 pips with no commission.
+1 pip on a 0.01 lot is $0.10, so a round trip costs about **$0.20, or 2.0% of equity**,
+against the spot bot's 0.2%. The cheap ECN tiers (0.1 pip + $3/round lot ≈ $0.04 total)
+require $300+ minimum deposits, so they are not available at this size. The cost only
+becomes comparable to spot around **$100 of equity**, and negligible around $1,000.
+
+**There is no serverless option, so the infrastructure costs more than the account.**
+An MT5 EA runs *inside the MetaTrader terminal*. There is no cron and no HTTP trigger;
+the terminal must be running continuously, which means a Windows VPS at roughly
+$10–15/month. On a $10 account the hosting bill exceeds any conceivable return by two
+orders of magnitude, which makes the strategy structurally unprofitable before the
+first trade. (The crypto bot's cron + free Postgres is $0, which is why $10 is viable
+there at all.) On top of that, a trend strategy holds for weeks and pays overnight
+swap/financing on the notional — a cost spot crypto does not have.
+
+**If you want to pursue MT5 anyway,** the one thing that makes a small account workable
+is a **cent account** (balance denominated in cents, so $10 = 1,000 cents and 0.01 lots
+carries the risk of 0.0001 lots). Several brokers offer these with $5–$50 minimums. That
+fixes the leverage problem but not the VPS problem.
+
+**Running both** is technically fine — they are independent systems. But at $10 of
+*combined* capital you cannot split it: $5 each fails BTC's $5 minimum notional and
+leaves nothing for MT5 margin. Practical sequencing is crypto-spot now (costs nothing,
+needs no VPS), MT5 later once capital makes the minimum lot and the hosting bill
+proportionally small — realistically around **$1,000+**, which is also where the MT5
+minimum deposit narratives stop being about $10 brokers.
+
+## 4. What would change this answer
+
+- **Capital above ~$1,000.** The BNB discount and maker-order strategies start to pay
   for themselves, and multi-asset diversification becomes possible.
 - **A cheaper venue with a real order book and comparable fees.** Nothing found in
   2026 beats 0.10% for an entry-tier retail taker.
