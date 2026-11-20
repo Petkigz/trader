@@ -16,10 +16,13 @@
  *   - the ledger is allowed to change what we *know* and what we *report*;
  *   - it is never allowed to change how much is risked per trade.
  *
- * `plannedRiskMultiplier` returns 1 unconditionally. That is not an oversight;
- * a test asserts it. Recovering a deficit with bigger positions is a martingale,
- * and a martingale on a $10 spot account is a scheduled ruin. `npm run catchup`
- * measures exactly how fast.
+ * The separation is structural rather than a matter of discipline: nothing on
+ * the trading path imports this module. Only `status.ts` and `demo.ts` do — the
+ * engine, the strategy and the risk rails never see it — and a test asserts
+ * exactly that, so a future edit cannot quietly wire the deficit into position
+ * sizing. Recovering a deficit with bigger positions is a martingale, and a
+ * martingale on a $10 spot account is a scheduled ruin. `npm run catchup`
+ * measures how fast.
  */
 
 import { DAY_MS } from "./util/num.ts";
@@ -480,4 +483,94 @@ export function expectedPerDay(equity: number, cagr: number): number {
 /** Capital needed to earn `perDay` at `cagr` — the honest answer to "$1/day". */
 export function capitalFor(perDay: number, cagr: number): number {
   return cagr <= 0 ? Infinity : (perDay * 365.25) / cagr;
+}
+
+/* -------------------------------------------------------------------------- */
+/* What the target actually costs                                             */
+/* -------------------------------------------------------------------------- */
+
+export interface TargetRow {
+  /** Annual return assumed. */
+  rate: number;
+  label: string;
+  /** Capital that would throw off the monthly target at this rate. */
+  capitalRequired: number;
+  /** How far the current equity is, 0-100. */
+  progressPct: number;
+  /** Years to get there at the account's own achieved rate. Null if never. */
+  yearsToReach: number | null;
+}
+
+export interface TargetPlan {
+  monthlyTarget: number;
+  annualTarget: number;
+  equity: number;
+  /** What the current equity pays per day at the measured rate, not the wish. */
+  paysPerDayNow: number;
+  rows: TargetRow[];
+  /** One sentence a human can act on. */
+  summary: string;
+}
+
+/** Rates this repo has measured, best first. Nothing here is aspirational. */
+const PLAN_RATES: Array<{ rate: number; label: string }> = [
+  { rate: 0.3, label: "30%/yr — best re-measurement" },
+  { rate: 0.233, label: "23.3%/yr — measured average" },
+  { rate: 0.1, label: "10%/yr — with costs and drawdowns" },
+];
+
+/**
+ * The honest accounting of a monthly income target.
+ *
+ * A monthly target is a statement about *capital*, not about effort: at a given
+ * return, the income is fixed by equity. So this reports the capital the target
+ * needs at each measured rate, how far the account is, and how long its own
+ * achieved rate would take to close the gap.
+ *
+ * Report-only, like the rest of the ledger. It cannot resize a position, and a
+ * test asserts that the plan never influences risk.
+ */
+export function targetPlan(opts: {
+  monthlyTarget: number;
+  equity: number;
+  achievedCagr: number | null;
+}): TargetPlan {
+  const monthlyTarget = Math.max(0, opts.monthlyTarget);
+  const annualTarget = monthlyTarget * 12;
+  const equity = Number.isFinite(opts.equity) && opts.equity > 0 ? opts.equity : 0;
+
+  const rows: TargetRow[] = PLAN_RATES.map(({ rate, label }) => {
+    const capitalRequired = rate > 0 ? annualTarget / rate : Number.POSITIVE_INFINITY;
+    const progressPct = capitalRequired > 0 ? Math.min(100, (equity / capitalRequired) * 100) : 0;
+    let yearsToReach: number | null = null;
+    if (equity > 0) {
+      if (equity >= capitalRequired) yearsToReach = 0;
+      else if (opts.achievedCagr !== null && opts.achievedCagr > 0) {
+        yearsToReach = Math.log(capitalRequired / equity) / Math.log(1 + opts.achievedCagr);
+      }
+    }
+    return { rate, label, capitalRequired, progressPct, yearsToReach };
+  });
+
+  const paysPerDayNow = (equity * PLAN_RATES[1].rate) / 365;
+  const base = rows[1];
+
+  const summary =
+    monthlyTarget <= 0
+      ? "No income target set."
+      : equity >= base.capitalRequired
+        ? `$${monthlyTarget.toFixed(0)}/month is funded: ${fmtUsd(equity)} at ${(base.rate * 100).toFixed(1)}%/yr pays ${fmtUsd((equity * base.rate) / 12)}/month.`
+        : `$${monthlyTarget.toFixed(0)}/month needs ${fmtUsd(base.capitalRequired)} at ${(base.rate * 100).toFixed(1)}%/yr. ` +
+          `You hold ${fmtUsd(equity)} (${base.progressPct.toFixed(2)}% of the way), which pays ${fmtUsd(paysPerDayNow)}/day` +
+          (base.yearsToReach === null
+            ? " — and your achieved rate does not close the gap at all."
+            : `; at your achieved rate it takes ${base.yearsToReach < 1 ? "under a year" : `${Math.round(base.yearsToReach)} years`}.`);
+
+  return { monthlyTarget, annualTarget, equity, paysPerDayNow, rows, summary };
+}
+
+function fmtUsd(x: number): string {
+  if (!Number.isFinite(x)) return "—";
+  if (Math.abs(x) >= 1000) return `$${Math.round(x).toLocaleString()}`;
+  return `$${x.toFixed(2)}`;
 }

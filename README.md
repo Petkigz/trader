@@ -120,6 +120,26 @@ Read as a *rate*, the target at small capital is not demanding, it is arithmetic
 | $3,636 | 99%/yr | 1.7× — needs its best year, every year |
 | $12,180 | 30%/yr | within the measured range |
 
+### Setting the target the bot reports against
+
+```bash
+GOAL_MONTHLY_TARGET=300     # $300/month; overrides GOAL_DAILY_TARGET
+```
+
+With that set, every `/api/status` and the dashboard show what the target actually costs — the
+capital it needs at each *measured* rate, how far the account is, and how long its own achieved
+rate would take to close the gap:
+
+```
+$300/month needs $15,451 at 23.3%/yr. You hold $10.00 (0.06% of the way),
+which pays $0.01/day; at your achieved rate it takes 34 years.
+```
+
+That is a report, not a plan the bot can act on. Nothing on the trading path imports the goal
+ledger — a test fails if the engine, strategy or risk rails ever do — so a deficit can never become
+a reason to size up. Recovering a shortfall with bigger positions is a martingale, and `npm run
+catchup` measures how fast that ends.
+
 ### How far it can be pushed
 
 ```bash

@@ -142,6 +142,8 @@ export interface BotConfig {
    * see src/goal.ts for why the ledger cannot be allowed to size positions.
    */
   goalDailyTarget: number;
+  /** Monthly income target in USDT, 0 when unset. Overrides `goalDailyTarget`. */
+  goalMonthlyTarget: number;
   /** Symbol the tick lock is scoped to (defaults to symbol). */
   logLevel: "debug" | "info" | "warn" | "error";
 }
@@ -181,6 +183,8 @@ function oneOf<T extends string>(env: Env, key: string, allowed: readonly T[], f
 
 export function loadConfig(env: Env = process.env): BotConfig {
   const mode = oneOf(env, "BOT_MODE", ["paper", "live"] as const, "paper");
+  /** Monthly income target, 0 when unset. GOAL_DAILY_TARGET is the fallback. */
+  const goalMonthly = num(env, "GOAL_MONTHLY_TARGET", 0);
   const strategy = oneOf(env, "STRATEGY", ["trend", "pullback", "meanrev", "ensemble"] as const, "trend");
 
   const cfg: BotConfig = {
@@ -272,10 +276,19 @@ export function loadConfig(env: Env = process.env): BotConfig {
     killSwitch: bool(env, "KILL_SWITCH", false),
     initialPaperUsdt: num(env, "PAPER_START_USDT", 10),
     publicBacktest: bool(env, "PUBLIC_BACKTEST", false),
-    goalDailyTarget: num(env, "GOAL_DAILY_TARGET", 1),
+    goalDailyTarget: goalMonthly > 0 ? goalMonthly / 30 : num(env, "GOAL_DAILY_TARGET", 1),
+    /**
+     * Monthly income target. When set it wins over GOAL_DAILY_TARGET, because
+     * "I want $300/month" is a statement a person makes about a month, and
+     * silently converting it to a different daily number is how targets drift.
+     */
+    goalMonthlyTarget: goalMonthly,
     logLevel: oneOf(env, "LOG_LEVEL", ["debug", "info", "warn", "error"] as const, "info"),
   };
 
+  if (cfg.goalMonthlyTarget < 0) {
+    throw new Error("env GOAL_MONTHLY_TARGET must be zero (unset) or positive");
+  }
   validate(cfg);
   return cfg;
 }

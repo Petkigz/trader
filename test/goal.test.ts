@@ -336,3 +336,73 @@ test("status names the dollars to regain the peak and the minimum tradeable bala
   assert.match(s.capital.message, /cannot place/);
   assert.equal(s.risk.blockReason, "below_min_notional");
 });
+
+function atRate(plan: { rows: Array<{ rate: number; progressPct: number; capitalRequired: number }> }, rate: number) {
+  const row = plan.rows.find((r) => r.rate === rate);
+  assert.ok(row, `no row for rate ${rate}`);
+  return row;
+}
+
+test("a monthly target reports the capital it needs, not encouragement", async () => {
+  const { targetPlan } = await import("../src/goal.ts");
+
+  const plan = targetPlan({ monthlyTarget: 300, equity: 10, achievedCagr: null });
+  assert.equal(plan.annualTarget, 3_600);
+
+  const at30 = plan.rows.find((r) => r.rate === 0.3)!;
+  const at233 = plan.rows.find((r) => r.rate === 0.233)!;
+  const at10 = plan.rows.find((r) => r.rate === 0.1)!;
+  assert.equal(at30.capitalRequired, 12_000);
+  assert.ok(Math.abs(at233.capitalRequired - 15_450.64) < 0.01, `got ${at233.capitalRequired}`);
+  assert.equal(at10.capitalRequired, 36_000);
+
+  // $10 against $15,450 is 0.065% of the way — the number, not a pep talk.
+  assert.ok(at233.progressPct > 0.06 && at233.progressPct < 0.07, `got ${at233.progressPct}`);
+  assert.equal(at233.yearsToReach, null, "with no achieved rate, the gap has no projection");
+  assert.match(plan.summary, /needs \$15,451 at 23\.3%\/yr/);
+  assert.match(plan.summary, /does not close the gap at all/);
+});
+
+test("an achieved rate turns the gap into a dated projection", async () => {
+  const { targetPlan } = await import("../src/goal.ts");
+  const plan = targetPlan({ monthlyTarget: 300, equity: 10, achievedCagr: 0.233 });
+  const at233 = plan.rows.find((r) => r.rate === 0.233)!;
+
+  // 10 -> 15,450 at 23.3%/yr is ~34 years; the point is it is finite and long.
+  assert.ok(at233.yearsToReach !== null && at233.yearsToReach > 30 && at233.yearsToReach < 40, `got ${at233.yearsToReach}`);
+});
+
+test("a funded target says so, and reports what it actually pays", async () => {
+  const { targetPlan } = await import("../src/goal.ts");
+  const plan = targetPlan({ monthlyTarget: 300, equity: 20_000, achievedCagr: 0.233 });
+  assert.equal(atRate(plan, 0.233).progressPct, 100);
+  assert.equal(atRate(plan, 0.3).progressPct, 100);
+  // $20,000 does not fund the same target at 10%/yr, and the plan says so.
+  assert.ok(atRate(plan, 0.1).progressPct < 60, `got ${atRate(plan, 0.1).progressPct}`);
+  assert.match(plan.summary, /is funded/);
+  // 20,000 at 23.3%/yr is ~$388/month.
+  assert.ok(plan.summary.includes("388"), plan.summary);
+});
+
+test("the target is report-only: nothing on the trading path can see it", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const { targetPlan } = await import("../src/goal.ts");
+
+  // The guarantee, asserted structurally: the goal ledger may only be imported
+  // by the two reporting modules. If the engine, strategy or risk rails ever
+  // import it, this fails — which is the point.
+  const allowed = new Set(["goal.ts", "status.ts", "demo.ts", "cli/status.ts", "cli/tick.ts"]);
+  const offenders: string[] = [];
+  for (const entry of await readdir("src", { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
+    if (allowed.has(entry.name)) continue;
+    const text = await readFile(`src/${entry.name}`, "utf8");
+    if (/from "\.\/goal\.ts"/.test(text)) offenders.push(entry.name);
+  }
+  assert.deepEqual(offenders, [], `these files import the goal ledger: ${offenders.join(", ")}`);
+
+  // And a huge gap still produces no risk instruction of any kind.
+  const poor = targetPlan({ monthlyTarget: 300, equity: 10, achievedCagr: 0.05 });
+  assert.ok(poor.rows[0].progressPct < 1);
+  assert.ok(!("riskMultiplier" in poor), "the plan must not carry a sizing field");
+});

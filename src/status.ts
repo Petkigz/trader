@@ -5,7 +5,7 @@
  */
 
 import type { BotConfig } from "./config.ts";
-import { goalStatus, shortfallToPeak, type Pressure } from "./goal.ts";
+import { goalStatus, shortfallToPeak, targetPlan, type Pressure, type TargetPlan } from "./goal.ts";
 import { summariseTrades, type LedgerSummary } from "./ledger.ts";
 import type { Store } from "./store/types.ts";
 import type { BotState, TickRecord, TradeRecord } from "./types.ts";
@@ -85,6 +85,8 @@ export interface StatusSnapshot {
     achievedPerDay: number;
     pressure: Pressure;
     verdict: string;
+    /** What the monthly income target costs in capital, at each measured rate. */
+    target: TargetPlan;
     /** Always false: the goal line is reported, it never blocks a trade. */
     entriesBlockedByGoal: false;
   };
@@ -93,6 +95,23 @@ export interface StatusSnapshot {
   recentTrades: TradeRecord[];
   recentTicks: TickRecord[];
   note?: string;
+}
+
+/** Round the plan for transport; the verdict string is computed from full precision. */
+function roundPlan(plan: TargetPlan): TargetPlan {
+  return {
+    ...plan,
+    monthlyTarget: round(plan.monthlyTarget, 2),
+    annualTarget: round(plan.annualTarget, 2),
+    equity: round(plan.equity, 2),
+    paysPerDayNow: round(plan.paysPerDayNow, 4),
+    rows: plan.rows.map((row) => ({
+      ...row,
+      capitalRequired: round(row.capitalRequired, 2),
+      progressPct: round(row.progressPct, 4),
+      yearsToReach: row.yearsToReach === null ? null : round(row.yearsToReach, 1),
+    })),
+  };
 }
 
 /**
@@ -113,6 +132,9 @@ function buildGoal(
     equity,
     now,
   );
+  // The monthly target is the knobs' source of truth when it is set; otherwise
+  // the daily target is the user's intent and a month is just 30 of those days.
+  const monthlyTarget = cfg.goalMonthlyTarget > 0 ? cfg.goalMonthlyTarget : cfg.goalDailyTarget * 30;
   const dayStart = state?.dayStartEquity ?? 0;
   return {
     dailyTarget: cfg.goalDailyTarget,
@@ -124,6 +146,7 @@ function buildGoal(
     achievedPerDay: round(status.achievedPerDay, 4),
     pressure: status.pressure,
     verdict: status.verdict,
+    target: roundPlan(targetPlan({ monthlyTarget, equity, achievedCagr: status.achievedCagr })),
     entriesBlockedByGoal: false,
   };
 }

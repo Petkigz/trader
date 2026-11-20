@@ -15,6 +15,7 @@ import type { BotConfig } from "./config.ts";
 import { syntheticCandles } from "./data.ts";
 import type { StatusSnapshot } from "./status.ts";
 import type { TickRecord, TradeRecord } from "./types.ts";
+import { targetPlan } from "./goal.ts";
 import { summariseTrades } from "./ledger.ts";
 import { round } from "./util/num.ts";
 
@@ -104,6 +105,11 @@ export function buildDemoSnapshot(cfg: BotConfig, now = Date.now()): StatusSnaps
       achievedPerDay: 0,
       pressure: "ahead",
       verdict: "demo data — the goal ledger is not simulated",
+      target: targetPlan({
+        monthlyTarget: cfg.goalMonthlyTarget > 0 ? cfg.goalMonthlyTarget : cfg.goalDailyTarget * 30,
+        equity,
+        achievedCagr: null,
+      }),
       entriesBlockedByGoal: false,
     },
     performance: summariseTrades(recentTrades),

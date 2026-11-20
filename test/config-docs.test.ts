@@ -59,3 +59,17 @@ test("every api handler has a matching, resolvable entry point", async () => {
     assert.ok(existsSync(join("api", required)), `api/${required} is missing`);
   }
 });
+
+test("GOAL_MONTHLY_TARGET wins over the daily target and is validated", async () => {
+  const { loadConfig } = await import("../src/config.ts");
+
+  const monthly = loadConfig({ GOAL_MONTHLY_TARGET: "300" });
+  assert.equal(monthly.goalMonthlyTarget, 300);
+  assert.equal(monthly.goalDailyTarget, 10, "$300/month is $10/day");
+
+  const dailyOnly = loadConfig({ GOAL_DAILY_TARGET: "1" });
+  assert.equal(dailyOnly.goalMonthlyTarget, 0);
+  assert.equal(dailyOnly.goalDailyTarget, 1);
+
+  assert.throws(() => loadConfig({ GOAL_MONTHLY_TARGET: "-5" }), /GOAL_MONTHLY_TARGET/);
+});
