@@ -52,6 +52,12 @@ function makeRes(raw: import("node:http").ServerResponse) {
   };
 }
 
+// The local dev server keeps the dashboard's backtest panel usable without
+// configuration, because it only ever listens on localhost. Production
+// (/api/backtest on Vercel) stays closed unless it is opted into — see
+// PUBLIC_BACKTEST in .env.example.
+if (!process.env.PUBLIC_BACKTEST) process.env.PUBLIC_BACKTEST = "true";
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
   const pathname = url.pathname;

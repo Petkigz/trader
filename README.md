@@ -516,6 +516,13 @@ commodity futures back to 1972 ([`docs/ASSETCLASS.md`](docs/ASSETCLASS.md)). The
 t = −2.45)**. The gate is insurance, not alpha — and the crypto result that looked like alpha was
 one cycle.
 
+### Is it safe to leave alone?
+
+[`docs/AUDIT.md`](docs/AUDIT.md) is a pass over the money paths, failure handling, credentials and
+persistence, with what was found and what was fixed. Two findings are worth knowing before deploying:
+`/api/backtest` is closed by default (opt in with `PUBLIC_BACKTEST`), and a live API key with
+withdrawals enabled now latches the kill switch instead of trading.
+
 ### The goal line, and what it is allowed to change
 
 ```bash

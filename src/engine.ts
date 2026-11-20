@@ -229,20 +229,36 @@ export async function runTick(deps: EngineDeps): Promise<TickResult> {
         onDust: () => { position = null; action = "HOLD"; reason = "dust_position"; detail = "position below exchange minimum, written off"; },
         events,
       });
+
     } else if (decision.action === "ENTER_LONG" && !position) {
       if (entriesBlocked) {
         action = "HOLD";
         reason = `blocked:${risk.blockReason}`;
         detail = `signal "${decision.reason}" ignored: entries blocked by ${risk.blockReason}`;
       } else {
+        // Live only, and only when about to put money at risk: a key with
+        // withdrawals enabled turns a bug into a theft, so it is worth one
+        // extra API call on the few days a year we actually buy. The result is
+        // cached in `killSwitch`, which survives in the store, so this is asked
+        // once and then enforced by the existing block.
+        const keyCheck = await checkLiveKey(exchange, cfg, log);
+        if (!keyCheck.ok) {
+          state = { ...state, killSwitch: true };
+          action = "HOLD";
+          reason = keyCheck.reason;
+          detail = keyCheck.detail;
+          events.push(keyCheck.detail);
+          log.error("refusing to trade: unsafe API key", { reason: keyCheck.reason });
+        }
+
         const snap = adaptiveFraction(daily, cfg);
         const sizing = sizePosition(cashAvailable, price, info, cfg, snap.fraction);
-        if (!sizing.ok) {
+        if (keyCheck.ok && !sizing.ok) {
           action = "HOLD";
           reason = sizing.reason;
           detail = `cannot size an order: ${sizing.reason} (cash ${round(cashAvailable, 2)}, min notional ${info.minNotional})`;
           log.warn("sizing refused", { reason: sizing.reason, cash: cashAvailable, minNotional: info.minNotional });
-        } else {
+        } else if (keyCheck.ok) {
           const order = await exchange.marketBuyQuote(cfg.symbol, sizing.notional);
           const fillPrice = order.qty > 0 ? order.quoteQty / order.qty : price;
 
@@ -535,6 +551,43 @@ async function fetchClosedCandles(
   const closed = raw.filter((c) => c.closeTime <= now);
   if (closed.length > 0) return closed;
   return raw.slice(0, -1);
+}
+
+/**
+ * The one live-mode gate that cannot be inferred from balances.
+ *
+ * `getApiRestrictions` is optional in the exchange interface and can fail on
+ * testnets, so an unknown answer is a warning, not a block. A *known* dangerous
+ * answer is a hard stop: an API key that can withdraw is a key that can turn
+ * any bug in this repo into a total loss.
+ */
+async function checkLiveKey(
+  exchange: Exchange,
+  cfg: BotConfig,
+  log: Logger,
+): Promise<{ ok: boolean; reason: string; detail: string }> {
+  if (cfg.mode !== "live") return { ok: true, reason: "", detail: "" };
+  const r = await exchange.getApiRestrictions().catch(() => null);
+  if (!r) {
+    log.warn("could not read API key restrictions; continuing with withdrawal risk unknown");
+    return { ok: true, reason: "", detail: "" };
+  }
+  if (r.withdrawalsEnabled) {
+    return {
+      ok: false,
+      reason: "unsafe_api_key",
+      detail:
+        "API key has withdrawals enabled. Disable withdrawals on the key and clear the kill switch to resume.",
+    };
+  }
+  if (!r.spotTradingEnabled) {
+    return {
+      ok: false,
+      reason: "no_spot_permission",
+      detail: "API key cannot place spot orders — trading would fail on every signal.",
+    };
+  }
+  return { ok: true, reason: "", detail: "" };
 }
 
 async function notifyTrade(deps: EngineDeps, log: Logger, trade: TradeRecord, equity: number): Promise<void> {

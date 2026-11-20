@@ -129,6 +129,15 @@ export interface BotConfig {
   killSwitch: boolean;
   initialPaperUsdt: number;
   /**
+   * Allow the unauthenticated `/api/backtest` in paper mode.
+   *
+   * Off by default: the endpoint downloads years of candles from the exchange
+   * and simulates them, which is expensive, rate-limited upstream, and cheap to
+   * abuse by anyone who finds the URL. Turn it on for a demo, or set
+   * DASHBOARD_TOKEN and use that instead.
+   */
+  publicBacktest: boolean;
+  /**
    * The stated goal, USDT per day. Reported against, never traded toward:
    * see src/goal.ts for why the ledger cannot be allowed to size positions.
    */
@@ -262,6 +271,7 @@ export function loadConfig(env: Env = process.env): BotConfig {
 
     killSwitch: bool(env, "KILL_SWITCH", false),
     initialPaperUsdt: num(env, "PAPER_START_USDT", 10),
+    publicBacktest: bool(env, "PUBLIC_BACKTEST", false),
     goalDailyTarget: num(env, "GOAL_DAILY_TARGET", 1),
     logLevel: oneOf(env, "LOG_LEVEL", ["debug", "info", "warn", "error"] as const, "info"),
   };
@@ -285,6 +295,11 @@ export function validate(cfg: BotConfig): void {
 
   if (!(cfg.goalDailyTarget >= 0)) throw new Error("goalDailyTarget must be >= 0");
   if (!(cfg.risk.minNotional > 0)) throw new Error("risk.minNotional must be > 0");
+  // Entry above +buffer and exit below -buffer must not overlap: if they did, a
+  // single candle could satisfy both, and the bot would exit and re-enter on
+  // the same bar — churn paid for twice.
+  if (!(cfg.trend.entryBuffer >= 0)) throw new Error("trend.entryBuffer must be >= 0");
+  if (!(cfg.trend.exitBuffer >= 0)) throw new Error("trend.exitBuffer must be >= 0");
   if (!(cfg.risk.positionFraction > 0 && cfg.risk.positionFraction <= 1)) {
     throw new Error("risk.positionFraction must be in (0, 1]");
   }

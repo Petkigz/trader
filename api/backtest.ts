@@ -6,6 +6,9 @@
  * Useful because serverless functions have outbound network access even when
  * your laptop (or corporate proxy) does not. The result is the same object
  * `npm run backtest` writes to disk.
+ *
+ * Requires DASHBOARD_TOKEN/CRON_SECRET, unless PUBLIC_BACKTEST=true is set
+ * deliberately for a throwaway demo.
  */
 
 import { authorize, type MinimalRequest } from "../src/auth.ts";
@@ -41,7 +44,11 @@ export default async function handler(req: MinimalRequest, res: MinimalResponse)
   }
 
   const secret = cfg.security.dashboardToken || cfg.security.cronSecret;
-  const auth = authorize(req, secret, { allowWhenUnset: cfg.mode === "paper" });
+  // Failure is the safe default: this endpoint is expensive and upstream
+  // rate-limited, so an open one is a way to have your Vercel quota and your
+  // exchange IP reputation spent by a stranger. Paper mode alone is not a
+  // reason to leave it open — costs are real in every mode.
+  const auth = authorize(req, secret, { allowWhenUnset: cfg.publicBacktest });
   if (!auth.ok) {
     res.status(auth.status).json({ ok: false, error: auth.reason });
     return;

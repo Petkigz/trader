@@ -267,3 +267,101 @@ describe("runTick — resilience", () => {
     assert.equal(state?.symbol, "BTCUSDT");
   });
 });
+
+describe("runTick — acting twice on the same candle", () => {
+  it("reads the closed candle, so an intraday price move neither stops nor re-enters", async () => {
+    const daily = risingCandles();
+    const barClose = daily[daily.length - 1].closeTime;
+    const exchange = new FakeExchange({ usdt: 10, price: 150, daily });
+    const store = new MemoryStore();
+
+    const buy = await runTick(makeDeps(exchange, store, barClose + 1));
+    assert.equal(buy.action, "ENTER_LONG");
+
+    // A 33% intraday collapse does not trigger the 25% crash stop, because the
+    // stop is armed on closes. That is a deliberate trade-off: no wick stops,
+    // and no reacting to a price the strategy never saw.
+    exchange.price = 100;
+    const dip = await runTick(makeDeps(exchange, store, barClose + 6 * 3_600_000));
+    assert.equal(dip.action, "HOLD");
+    assert.equal(dip.reason, "trend_intact");
+
+    // Nor does the same candle produce a second order of any kind.
+    assert.equal(exchange.orders.length, 1);
+  });
+
+  it("exit and entry conditions cannot both hold on one candle", async () => {
+    const { evaluate } = await import("../src/strategy.ts");
+    const { testConfig: tc } = await import("./helpers.ts");
+    const daily = risingCandles();
+    const now = daily[daily.length - 1].closeTime;
+    const c = tc();
+    const held = evaluate({
+      daily,
+      hourly: [],
+      position: { symbol: "BTCUSDT", qty: 1, entryPrice: 150, entryAt: now, stopPrice: null, targetPrice: null },
+      price: 150,
+      now,
+      cfg: c,
+    });
+    const flat = evaluate({ daily, hourly: [], position: null, price: 150, now, cfg: c });
+    assert.equal(flat.action, "ENTER_LONG");
+    assert.notEqual(held.action, "EXIT_LONG", "the same bar cannot want out and in");
+  });
+});
+
+describe("runTick — live API key safety", () => {
+  const liveCfg = () =>
+    testConfig({ BOT_MODE: "live", BINANCE_API_KEY: "k", BINANCE_API_SECRET: "s" });
+
+  it("refuses to buy when the key can withdraw, and latches the kill switch", async () => {
+    const daily = risingCandles();
+    const now = daily[daily.length - 1].closeTime + 1;
+    const exchange = new FakeExchange({ usdt: 10, price: 150, daily });
+    exchange.restrictions = { withdrawalsEnabled: true, spotTradingEnabled: true };
+    const store = new MemoryStore();
+
+    const res = await runTick(makeDeps(exchange, store, now, { cfg: liveCfg() }));
+
+    assert.equal(res.action, "HOLD");
+    assert.equal(res.reason, "unsafe_api_key");
+    assert.match(res.detail, /disable withdrawals/i);
+    assert.equal(exchange.orders.length, 0, "no order may be placed");
+    assert.equal((await store.getState())!.killSwitch, true, "the stop must survive the tick");
+  });
+
+  it("refuses a key that cannot trade spot at all", async () => {
+    const daily = risingCandles();
+    const now = daily[daily.length - 1].closeTime + 1;
+    const exchange = new FakeExchange({ usdt: 10, price: 150, daily });
+    exchange.restrictions = { withdrawalsEnabled: false, spotTradingEnabled: false };
+    const store = new MemoryStore();
+
+    const res = await runTick(makeDeps(exchange, store, now, { cfg: liveCfg() }));
+    assert.equal(res.reason, "no_spot_permission");
+    assert.equal(exchange.orders.length, 0);
+  });
+
+  it("buys normally when the key is properly restricted", async () => {
+    const daily = risingCandles();
+    const now = daily[daily.length - 1].closeTime + 1;
+    const exchange = new FakeExchange({ usdt: 10, price: 150, daily });
+    exchange.restrictions = { withdrawalsEnabled: false, spotTradingEnabled: true };
+    const store = new MemoryStore();
+
+    const res = await runTick(makeDeps(exchange, store, now, { cfg: liveCfg() }));
+    assert.equal(res.action, "ENTER_LONG");
+    assert.equal((await store.getState())!.killSwitch, false);
+  });
+
+  it("does not ask in paper mode, where there is no key to be unsafe", async () => {
+    const daily = risingCandles();
+    const now = daily[daily.length - 1].closeTime + 1;
+    const exchange = new FakeExchange({ usdt: 10, price: 150, daily });
+    exchange.restrictions = { withdrawalsEnabled: true, spotTradingEnabled: true };
+    const store = new MemoryStore();
+
+    const res = await runTick(makeDeps(exchange, store, now));
+    assert.equal(res.action, "ENTER_LONG", "paper mode has nothing to steal");
+  });
+});

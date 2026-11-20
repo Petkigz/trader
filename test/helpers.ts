@@ -150,8 +150,11 @@ export class FakeExchange implements Exchange {
     return [];
   }
 
+  /** Set `restrictions` on the instance to simulate a live key's permissions. */
+  restrictions: { withdrawalsEnabled: boolean; spotTradingEnabled: boolean } | null = null;
+
   async getApiRestrictions() {
-    return null;
+    return this.restrictions;
   }
 }
 

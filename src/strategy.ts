@@ -24,7 +24,13 @@ export interface StrategyInput {
   /** Closed hourly candles, oldest first. */
   hourly: readonly Candle[];
   position: Position | null;
-  /** Current market price (used for live exits; falls back to last close). */
+  /**
+   * Current market price. The trend strategy deliberately ignores it: every
+   * decision is taken on the **last closed daily candle**, so a stop is only
+   * armed once a close confirms it. That is what makes two ticks on the same
+   * day idempotent — the second sees the same reading as the first.
+   * (`pullback` uses it, because it works on hourly bars.)
+   */
   price: number;
   now: number;
   cfg: BotConfig;
