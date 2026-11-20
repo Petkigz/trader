@@ -31,3 +31,23 @@ test("the comparison with a deposit is stated, because it is the honest alternat
   const out = daily();
   assert.match(out, /A 4%\/yr deposit yields \$1\/day on \$9,125/);
 });
+
+test("a good day clears the daily target by a lot, and a bad day undoes it", () => {
+  const out = daily();
+  // Not a thin tail: being fully invested means an ordinary up-day beats $1.
+  const row = (t: number) => {
+    const m = out.match(new RegExp(`gained \\$${t}\\s+or more\\s+(\\d+)\\s+([\\d.]+)%`));
+    assert.ok(m, `threshold $${t} must be reported`);
+    return { days: Number(m[1]), share: Number(m[2]) };
+  };
+  assert.ok(row(1).share > 15, "many days clear $1");
+  assert.ok(row(100).share > 5, "an ordinary up-day at this capital clears $100");
+  assert.ok(row(365).share > 0.5, "a whole year's target in one day is not rare");
+
+  // The edge is the small difference between two large totals — that is why
+  // daily results look like noise and the target only shows up over years.
+  const up = out.match(/all up-days in total\s+\$([\d,]+)/);
+  const down = out.match(/all down-days in total\s+-\$([\d,]+)/);
+  assert.ok(up && down, "both totals must be reported");
+  assert.ok(Number(up[1].replace(/,/g, "")) > Number(down[1].replace(/,/g, "")), "profit is positive overall");
+});

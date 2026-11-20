@@ -158,6 +158,18 @@ npm run daily                    # at $3,636, the capital $1/day needs at 9.9%
 | Longest stretch with no change | **672 days** |
 | Best / worst single day | +$14,105 (DOGE, +388%) / −$1,710 (LINK, −47%) |
 
+**And a good day clears the target many times over** — because the account is ~97% deployed when it is in the market at all:
+
+| Day clears | Share of days |
+|---|---|
+| $1 | **19.8%** |
+| $10 | 18.5% |
+| $100 | 8.9% |
+| $365 (a whole year of target) | **1.6%** |
+| Median *winning* day | **$86.76** |
+
+That upside is not extra "opportunities" — it is one position held through a large move. Across the panel, all up-days total **+$1.61M** and all down-days **−$1.41M**: the profit is the small difference between two large, nearly cancelling totals. It is why a single day tells you nothing and a year is the shortest honest measurement.
+
 So to average $1/day you have to sit through swings of roughly **85× the daily goal**, and three days in five pay nothing at all. It is four jumps a year with long silences between them, not a wage.
 
 **If "$1 every calendar day" is the requirement rather than "$1/day on average", no capital and no setting delivers it** — a trend rule is in cash most of the time by design. Only an instrument that pays continuously can: a 4%/yr deposit yields $1/day on **$9,125**, with certainty and with no upside.

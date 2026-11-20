@@ -111,6 +111,24 @@ async function main(): Promise<void> {
   console.log(`  biggest single day                 ${money(dollars(best.day))} (${best.symbol}, +${pct(best.day)})`);
   console.log(`  worst single day                   ${money(dollars(worst.day))} (${worst.symbol}, ${pct(worst.day)})`);
 
+  // "It can make more than $1 on a good day" — so how much more, how often?
+  console.log("\nHow much a day clears the $1 target, and by how much:");
+  console.log("  threshold                       days        share");
+  for (const t of [1, 5, 10, 30, 100, 365]) {
+    const n = changes.filter((d) => dollars(d) >= t).length;
+    console.log(`  gained $${String(t).padEnd(5)} or more          ${String(n).padStart(7)}        ${pct(n / total).padStart(6)}`);
+  }
+  const wins = changes.filter((d) => dollars(d) >= 1).sort((a, b) => a - b);
+  if (wins.length > 0) {
+    console.log(`  median winning day              ${money(dollars(wins[Math.floor(wins.length / 2)])).padStart(7)}`);
+  }
+  const upSum = changes.filter((d) => d > 0).reduce((a, b) => a + b, 0);
+  const downSum = changes.filter((d) => d < 0).reduce((a, b) => a + b, 0);
+  console.log(
+    `  all up-days in total            ${money(dollars(upSum)).padStart(7)}\n` +
+      `  all down-days in total          ${money(dollars(downSum)).padStart(7)}   (per asset, over its whole history)`,
+  );
+
   // Where the year's money actually comes from.
   const positive = changes.filter((d) => d > 0).reverse();
   const top = positive.slice(0, 10).reduce((a, b) => a + b, 0);
