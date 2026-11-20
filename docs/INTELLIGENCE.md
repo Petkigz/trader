@@ -255,6 +255,9 @@ delisted. This part is genuinely automatic: `/api/v3/exchangeInfo` is fetched an
 tick (`src/exchange/binance.ts:181`), so orders are sized against current rules rather than last
 month's constants. Facts update. Formulas do not.
 
+Where information would come from, and the six-stage filter that decides whether it made things
+better, is worked through in [`LEARNING.md`](LEARNING.md).
+
 **Why no autonomous discovery?** Multiplicity. Search *k* strategies, each scored on 33 trades, and
 the best of *k* looks good by construction — the expected maximum R² under the null is 9.18% at
 n = 40, 1.90% at n = 200, 0.11% at n = 3,400 (§4a). A machine that invents strategies and keeps the
