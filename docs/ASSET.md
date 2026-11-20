@@ -144,7 +144,7 @@ them.
 ## 3. Rejected: MetaTrader 5 at this size
 
 MT5 is a *platform*, not a venue — you still choose a broker. It is a reasonable target
-eventually and a bad one at $10, for three structural reasons rather than any failure
+eventually and a bad one at $10, for structural reasons rather than any failure
 of MT5 itself.
 
 **The minimum lot forces leverage.** Every broker's smallest order is 0.01 lots. On
@@ -161,6 +161,42 @@ you cannot trade smaller. The consequences, on the smallest position that exists
 Compare the spot bot, which is unlevered: a $9.27 position moving 2% (BTC's measured
 daily vol) is 1.8% of the account. Spot cannot be liquidated because there is no
 borrowing; MT5 at $10 will be, eventually, on a day that is not even unusual.
+
+### What that does to the account, simulated
+
+20,000 paths, one year, same 56% market exposure for both systems. $10 start.
+MT5 is modelled with a fixed 0.01 lot ($1,160 notional, so P&L does not scale down as
+equity shrinks), $0.20 per round trip × 12/year, and declared dead once equity falls
+below the $2.32 needed to open another 0.01 lot. FX drift set to zero, i.e. generously.
+Crypto uses the measured +23.3% CAGR and 42% volatility.
+
+| | Crypto spot bot | MT5 at $10 |
+|---|---|---|
+| Median after 1 year | **$11.55** | **$0.00** |
+| Mean after 1 year | **$11.76** | $9.57 |
+| P(account dead in 1yr) | **0%** (spot cannot be liquidated) | **87.8%** |
+| Median day of death | — | **day 11** |
+| 25% dead by | — | **day 4** |
+| P(doubled) | 0.3% | 11.7% |
+| P(10×) | 0.0% | 3.3% |
+| Typical daily swing | ±1.2% of equity | **±40% of equity** |
+
+The result survives every assumption I could vary: at 6% annualised FX volatility
+(about 40% below the measured proxy) and with **all trading costs set to zero**, MT5
+still loses the account 78% of the time, with the same $0.00 median.
+
+Note the mean is *below the $10 you started with* even though 3.3% of paths reach 10×.
+That is what an absorbing barrier does: the rare winners are real, but the 88% of paths
+that hit zero pay for them and then some. MT5 is not a faster version of the same
+strategy — it is a lottery ticket with a small negative expected value.
+
+**Why it fails so fast.** Trend following needs months to express an edge; this
+strategy made 40 round trips over 8.7 years. At 116× leverage a move from $10 to the
+$2.32 margin floor is a −77% change in equity, which is **less than one third of a
+single daily standard deviation**. The account does not need bad luck, just an ordinary
+week. The time scale of the strategy and the time scale of the leverage are
+incompatible, and no amount of risk management fixes that — a stop-loss cannot act
+faster than a gap.
 
 **The cost per round trip is ~10× worse.** Standard/micro accounts — the only tier
 that accepts a $10 deposit — quote spreads from 0.7–1.2 pips with no commission.
