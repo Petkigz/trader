@@ -303,14 +303,17 @@ function toOrderResult(side: "BUY" | "SELL", order: RawOrder, info: SymbolInfo):
   const quoteQty = Number(order.cummulativeQuoteQty);
   const price = qty > 0 ? quoteQty / qty : 0;
 
-  // Commission is usually taken in the base asset on buys (or BNB if enabled),
-  // so convert it into quote terms to keep PnL accounting uniform.
+  // Commission is charged in the base asset on buys (or BNB if enabled).
+  // Netting it out here means `qty` is always the amount actually credited to
+  // the account, which is what the engine adds to its balance mirror and what
+  // the paper simulator models. No approximation, no drift.
   let feeQuote = 0;
+  let baseFeeQty = 0;
   for (const f of order.fills ?? []) {
     const commission = Number(f.commission);
     if (!(commission > 0)) continue;
     if (f.commissionAsset === info.baseAsset) {
-      // commission charged in the asset we bought -> value it at the fill price
+      baseFeeQty += commission;
       feeQuote += commission * Number(f.price);
     } else {
       // quote asset, or BNB which we approximate 1:1 (it understates by a few
@@ -320,7 +323,13 @@ function toOrderResult(side: "BUY" | "SELL", order: RawOrder, info: SymbolInfo):
   }
 
   if (qty <= 0) throw new ExchangeError(`order for ${info.symbol} executed 0 quantity`, "zero-fill");
-  return { id: String(order.orderId), side, qty, price, quoteQty, feeQuote };
+
+  const creditedQty = side === "BUY" ? Math.max(qty - baseFeeQty, 0) : qty;
+  if (side === "BUY" && creditedQty <= 0) {
+    throw new ExchangeError(`order for ${info.symbol} credited 0 after commission`, "zero-fill");
+  }
+
+  return { id: String(order.orderId), side, qty: creditedQty, price, quoteQty, feeQuote };
 }
 
 function trim(n: number): string {

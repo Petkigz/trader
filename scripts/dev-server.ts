@@ -14,8 +14,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { hasStore, loadConfig } from "../src/config.ts";
-import { buildStore } from "../src/runtime.ts";
-import { buildStatus } from "../src/status.ts";
+import { buildDemoSnapshot } from "../src/demo.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const ROOT = join(import.meta.dirname, "..", "public");
@@ -65,9 +64,15 @@ const server = createServer(async (req, res) => {
       // Demo fallback so the dashboard has something to show without a database.
       if (name === "status" && !hasStore(loadConfig())) {
         const cfg = loadConfig();
-        const demo = await buildStatus(cfg, buildStore(cfg));
+        const demo = buildDemoSnapshot(cfg);
         res.setHeader("Content-Type", "application/json; charset=utf-8");
-        res.end(JSON.stringify({ ...demo, demo: true, note: "DEMO DATA — no Supabase configured" }, null, 2));
+        res.end(
+          JSON.stringify(
+            { ...demo, demo: true, note: "DEMO DATA — simulated market, no Supabase configured" },
+            null,
+            2,
+          ),
+        );
         return;
       }
 

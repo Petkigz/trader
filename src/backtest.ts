@@ -53,6 +53,8 @@ export interface BacktestResult {
   avgHoldDays: number;
   equityCurve: Array<{ ts: number; equity: number }>;
   monthly: Array<{ month: string; equity: number; returnPct: number }>;
+  /** Most recent fills, newest first — handy for the dashboard demo view. */
+  recentTrades: TradeRecord[];
   lastSignal: { action: string; reason: string; detail: string };
 }
 
@@ -158,20 +160,28 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
     } else if (decision.action === "ENTER_LONG" && qty === 0 && !risk.entriesBlocked) {
       const sizing = sizePosition(cash, price, info, cfg);
       if (sizing.ok) {
+        // Same fill model as PaperExchange and as Binance: quantity rounds down
+        // to the lot step, commission is charged in the base asset, and only the
+        // quantised amount is actually spent (the dust stays as cash).
         const fillPrice = price * (1 + slip);
-        const feeQuote = sizing.notional * fee;
-        const bought = floorToStep((sizing.notional - feeQuote) / fillPrice, info.stepSize);
+        const grossQty = floorToStep(sizing.notional / fillPrice, info.stepSize);
+        const spend = grossQty * fillPrice;
+        const feeQty = grossQty * fee;
+        const bought = grossQty - feeQty;
+        const feeQuote = feeQty * fillPrice;
 
-        if (bought > 0) {
-          cash -= sizing.notional;
+        if (bought > 0 && spend >= info.minNotional && spend <= cash) {
+          cash -= spend;
           feesPaid += feeQuote;
           qty = bought;
-          costBasis = sizing.notional;
+          costBasis = spend;
           entryAt = now;
           position = {
             symbol: cfg.symbol,
             qty,
-            entryPrice: fillPrice,
+            // What we actually paid per unit received (fee included), so the
+            // crash stop and the PnL basis match the live engine exactly.
+            entryPrice: spend / bought,
             entryAt: now,
             stopPrice: decision.stopPrice ?? null,
             targetPrice: decision.targetPrice ?? null,
@@ -186,7 +196,7 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
             side: "BUY",
             qty: bought,
             price: round(fillPrice, 2),
-            quoteQty: round(sizing.notional, 2),
+            quoteQty: round(spend, 2),
             feeQuote: round(feeQuote, 4),
             reason: decision.reason,
             orderId: "",
@@ -251,6 +261,7 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
     avgHoldDays: holdDays.length ? round(holdDays.reduce((a, b) => a + b, 0) / holdDays.length, 1) : 0,
     equityCurve: downsample(equityCurve, 400),
     monthly: monthlyReturns(equityCurve),
+    recentTrades: [...trades].reverse().slice(0, 12),
     lastSignal,
   };
 }
