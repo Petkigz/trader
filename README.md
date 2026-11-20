@@ -120,6 +120,35 @@ Read as a *rate*, the target at small capital is not demanding, it is arithmetic
 | $3,636 | 99%/yr | 1.7× — needs its best year, every year |
 | $12,180 | 30%/yr | within the measured range |
 
+### When does it pay? The compounding schedule
+
+```bash
+npm run schedule                 # from $10, $100, $1,000
+npm run schedule -- --start=100
+```
+
+The mechanism is exactly what it sounds like: the balance compounds, and income rises with the
+balance, so the number does not stay at $300/month once the capital has grown. What is not
+negotiable is the date. At the **realised** 9.9%/yr — the rate the rule actually delivered across
+20 assets with costs, drawdowns and busts counted — income arrives at:
+
+| Target | Balance needed | $10 start | $100 start | $1,000 start |
+|---|---|---|---|---|
+| **$1/day** | $3,636 | **62 years** | 38 years | 14 years |
+| **$300/mo** | $36,364 | **87 years** | 62 years | 38 years |
+
+At the single-asset backtest's 23.3%/yr those become 24 / 13 / 2 years for $1/day and 35 / 24 / 13
+years for $300/month. At 30%/yr: 18 / 9 / 1 and 27 / 18 / 9.
+
+**Does a bigger balance earn a better rate?** Measured, over the same 6.3 years: $10 → $18.17
+(1.82×, 9.9%/yr) and $100 → $185.00 (1.85×, 10.1%/yr). Ten times the capital produced ten times the
+dollars and two-tenths of a point of rate. The only genuine scale effect is friction — a $5 minimum
+order and a 0.2% fee cost a $10 account several points a year and a $10,000 account almost nothing —
+and that is already inside the 9.9%. **Capital moves the date, not the rate.**
+
+These figures assume the average return every year with no losing ones. The record has 19% losing
+years, a −61% peak-to-trough drawdown, and 1 in 20 assets finishing below its start.
+
 ### Setting the target the bot reports against
 
 ```bash
