@@ -12,7 +12,7 @@
 
 import type { ContextPoint } from "./context.ts";
 
-export type GateName = "off" | "market" | "volume" | "cost" | "all";
+export type GateName = "off" | "market" | "volume" | "participation" | "cost" | "all";
 
 export interface GateDecision {
   allow: boolean;
@@ -31,9 +31,11 @@ export interface GateOptions {
    * "the average day is ten times the friction".
    */
   minEdgeToCost?: number;
+  /** Floor for the range-expansion proxy, when no volume series is available. */
+  minRangeExpansion?: number;
 }
 
-const DEFAULTS = { minVolumeRatio: 0.5, minEdgeToCost: 10 };
+const DEFAULTS = { minVolumeRatio: 0.5, minEdgeToCost: 10, minRangeExpansion: 0.7 };
 
 export function gateDecision(
   name: GateName,
@@ -46,10 +48,11 @@ export function gateDecision(
 
   if (name === "market") return marketGate(ctx);
   if (name === "volume") return volumeGate(ctx, o.minVolumeRatio);
+  if (name === "participation") return participationGate(ctx, o.minRangeExpansion);
   if (name === "cost") return costGate(ctx, o.minEdgeToCost);
 
   // "all": every gate must pass, and the reason names the first that did not.
-  for (const g of ["market", "volume", "cost"] as const) {
+  for (const g of ["market", "volume", "participation", "cost"] as const) {
     const d = gateDecision(g, ctx, opts);
     if (!d.allow) return d;
   }
@@ -81,6 +84,24 @@ function volumeGate(ctx: ContextPoint, min: number): GateDecision {
   return {
     allow: false,
     reason: `volume at ${ctx.volumeRatio.toFixed(2)}x its average (floor ${min})`,
+  };
+}
+
+/**
+ * The participation proxy, for a panel with no volume.
+ *
+ * A breakout on a bar whose range is *contracting* is a quieter claim than one
+ * on an expanding bar: nobody moved much, and price drifted over its average.
+ * Range is not volume — it says how far price went, not how much money went
+ * with it — but it is the closest thing observable in OHLC, and the alternative
+ * is deciding with nothing.
+ */
+function participationGate(ctx: ContextPoint, min: number): GateDecision {
+  if (ctx.rangeExpansion === null) return { allow: true, reason: "" };
+  if (ctx.rangeExpansion >= min) return { allow: true, reason: "" };
+  return {
+    allow: false,
+    reason: `range at ${ctx.rangeExpansion.toFixed(2)}x its average (floor ${min}) — a quiet bar`,
   };
 }
 

@@ -557,8 +557,10 @@ npm run context -- --dir=data/real
 Beta to BTC (1.18), correlation (0.69), and the spread between up-market and down-market days
 (+0.44% vs −0.37%) are all real, and all invisible to a bot that reads one symbol. Measured as
 trading filters they fail: the symbol's trend already agrees with the market 72% of the time, so a
-market gate re-tests what the entry rule knows. Volume is untested — the offline panel has no volume
-column. See [`docs/INTELLIGENCE.md`](docs/INTELLIGENCE.md) §2a.
+market gate re-tests what the entry rule knows. Volume is the one gap not yet given a fair trial: the offline panel has no column for it, so the
+question was asked with a range-expansion proxy, which lost. `npm run fetch:volume -- --write` adds
+real volume without touching a price, and the gate then tests itself for real.
+See [`docs/INTELLIGENCE.md`](docs/INTELLIGENCE.md) §2a.
 
 ### Learning, if it is ever allowed to happen
 

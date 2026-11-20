@@ -39,3 +39,47 @@ test("sorts out-of-order rows", () => {
   );
   assert.ok(candles[0].openTime < candles[1].openTime);
 });
+
+test("volume is merged without touching a single price digit", async () => {
+  const { mergeVolumeCsv } = await import("../src/data.ts");
+  const original = [
+    "date,open,high,low,close",
+    "2024-01-01,100.123,110.456,99.999,105.500",
+    "2024-01-02,105.500,107.000,104.000,106.250",
+  ].join("\n");
+
+  const volume = new Map([
+    ["2024-01-01", 1234.5678],
+    ["2024-01-02", 987.6543],
+  ]);
+  const merged = mergeVolumeCsv(original, volume);
+
+  assert.equal(merged.matched, 2);
+  assert.equal(merged.unmatched, 0);
+  const lines = merged.csv.trim().split("\n");
+  assert.equal(lines[0], "date,open,high,low,close,volume");
+  // Every original digit survives exactly.
+  assert.ok(lines[1].startsWith("2024-01-01,100.123,110.456,99.999,105.500,"), lines[1]);
+  assert.ok(lines[1].endsWith("1234.57"), lines[1]);
+});
+
+test("a date the exchange cannot supply stays blank, not zero", async () => {
+  const { mergeVolumeCsv } = await import("../src/data.ts");
+  const original = ["2024-01-01,100,110,99,105", "2024-01-02,105,107,104,106"].join("\n");
+  const merged = mergeVolumeCsv(original, new Map([["2024-01-01", 500]]));
+
+  const lines = merged.csv.trim().split("\n");
+  assert.equal(merged.unmatched, 1);
+  assert.equal(lines[2], "2024-01-02,105,107,104,106,", "blank, so a later run can fill it");
+  assert.ok(!lines[2].endsWith(",0"), "a zero would read as 'nobody traded'");
+});
+
+test("re-running the merge is idempotent and keeps an existing volume column", async () => {
+  const { mergeVolumeCsv } = await import("../src/data.ts");
+  const once = mergeVolumeCsv("2024-01-01,100,110,99,105", new Map([["2024-01-01", 500]])).csv;
+  const twice = mergeVolumeCsv(once, new Map([["2024-01-01", 500]]));
+
+  assert.equal(twice.alreadyHadVolume, true);
+  assert.equal(twice.csv, once, "merging the same data twice must change nothing");
+  assert.equal(twice.csv.trim().split("\n")[0], "date,open,high,low,close,volume", "one volume column, not two");
+});

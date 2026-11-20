@@ -23,7 +23,8 @@
     "catchup": "node --experimental-strip-types scripts/catchup.ts",
     "recover": "node --experimental-strip-types scripts/recover.ts",
     "growth": "node --experimental-strip-types scripts/growth.ts",
-    "context": "node --experimental-strip-types scripts/context.ts"
+    "context": "node --experimental-strip-types scripts/context.ts",
+    "fetch:volume": "node --experimental-strip-types scripts/fetch-volume.ts"
   },
   "dependencies": {},
   "devDependencies": {

@@ -56,7 +56,7 @@ test("without a reference the market is unknown, not bearish", () => {
   assert.equal(ctx[ctx.length - 1].beta, null);
 
   // Unknown must allow: a missing input is not a permanent veto.
-  for (const gate of ["market", "volume", "cost", "all"] as const) {
+  for (const gate of ["market", "volume", "participation", "cost", "all"] as const) {
     const d = gateDecision(gate, ctx[ctx.length - 1]);
     assert.equal(d.allow, true, `${gate} vetoed on no data: ${d.reason}`);
   }
@@ -122,11 +122,12 @@ test("a gate can only ever refuse, never create or resize", () => {
     beta: 1.4,
     correlation: 0.8,
     volumeRatio: 0.1,
+    rangeExpansion: 0.4,
     atrPct: 0.001,
     costPct: 0.0024,
     edgeToCost: 0.4,
   };
-  for (const gate of ["off", "market", "volume", "cost", "all"] as const) {
+  for (const gate of ["off", "market", "volume", "participation", "cost", "all"] as const) {
     const d = gateDecision(gate, point);
     assert.equal(typeof d.allow, "boolean");
     assert.deepEqual(Object.keys(d).sort(), ["allow", "reason"], "no size, no action, just a veto");
@@ -159,4 +160,26 @@ test("conditional stats split the symbol's days by what the market was doing", (
   assert.ok(stats.barsMarketUp > 0 && stats.barsMarketDown > 0);
   assert.ok((stats.meanReturnMarketUp ?? 0) > 0, "up-market days were up days");
   assert.ok((stats.meanReturnMarketDown ?? 0) < 0, "down-market days were down days");
+});
+
+test("range expansion is a participation proxy that needs no volume column", () => {
+  const closes = ramp(80, 100, 1);
+  const candles = bars(closes, { range: 2 });
+
+  // One bar is almost motionless, one bar opens up to several times the usual
+  // range. The gate should tell them apart without a volume column.
+  candles[60].high = candles[60].close + 0.05;
+  candles[60].low = candles[60].close - 0.05;
+  candles[70].high = candles[70].close + 4;
+  candles[70].low = candles[70].close - 4;
+
+  const ctx = contextSeries(candles, null, { ...OPTS, volumeWindow: 30 });
+  const quiet = ctx[60];
+  const loud = ctx[70];
+  assert.ok(quiet.rangeExpansion !== null && quiet.rangeExpansion < 0.7, `got ${quiet.rangeExpansion}`);
+  assert.ok(loud.rangeExpansion !== null && loud.rangeExpansion > 2, `got ${loud.rangeExpansion}`);
+
+  assert.equal(gateDecision("participation", quiet).allow, false);
+  assert.equal(gateDecision("participation", loud).allow, true);
+  assert.match(gateDecision("participation", quiet).reason, /quiet bar/);
 });

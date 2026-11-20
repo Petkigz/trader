@@ -40,6 +40,15 @@ export interface ContextPoint {
   correlation: number | null;
   /** Today's volume against its trailing average (1 = normal). */
   volumeRatio: number | null;
+  /**
+   * Today's true range against its trailing average (1 = normal).
+   *
+   * The participation proxy. When a panel has no volume column — which is true
+   * of every CSV in this repo — this is the only observable hint of whether a
+   * move had anything behind it. It is *not* volume, and it is never reported as
+   * if it were.
+   */
+  rangeExpansion: number | null;
   /** Average daily true range as a fraction of price. */
   atrPct: number | null;
   /** Round-trip friction as a fraction: 2 × fee + 2 × slippage. */
@@ -132,6 +141,7 @@ export function contextSeries(
       beta,
       correlation,
       volumeRatio: volumeRatioAt(symbol, i, o.volumeWindow),
+      rangeExpansion: rangeExpansionAt(symbol, i, o.volumeWindow),
       atrPct: atrPctAt(symbol, i, o.atrWindow),
       costPct,
       edgeToCost: null, // filled below, once atrPct is known
@@ -156,6 +166,27 @@ function atrPctAt(candles: readonly Candle[], i: number, window: number): number
     sum += tr / c.close;
   }
   return sum / window;
+}
+
+function rangeExpansionAt(candles: readonly Candle[], i: number, window: number): number | null {
+  if (i < window) return null;
+  const today = trueRangePct(candles, i);
+  if (today === null) return null;
+  let sum = 0;
+  for (let k = i - window; k < i; k++) {
+    const tr = trueRangePct(candles, k);
+    if (tr === null) return null;
+    sum += tr;
+  }
+  const avg = sum / window;
+  return avg > 0 ? today / avg : null;
+}
+
+function trueRangePct(candles: readonly Candle[], i: number): number | null {
+  const c = candles[i];
+  const prev = candles[i - 1]?.close ?? c.open;
+  if (!(c.close > 0)) return null;
+  return Math.max(c.high - c.low, Math.abs(c.high - prev), Math.abs(c.low - prev)) / c.close;
 }
 
 function volumeRatioAt(candles: readonly Candle[], i: number, window: number): number | null {

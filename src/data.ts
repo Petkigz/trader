@@ -195,3 +195,80 @@ export function gaussian(rand: () => number): number {
   while (v === 0) v = rand();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Volume enrichment                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface CsvRow {
+  /** The date exactly as it appears in the file, so rewriting is lossless. */
+  date: string;
+  /** Open/high/low/close as written, untouched. */
+  prices: string[];
+  /** Volume field if the file already has one. */
+  volume: string | null;
+}
+
+/** Split a candle CSV into rows without interpreting the price columns. */
+export function parseCsvRows(text: string): { header: string | null; rows: CsvRow[] } {
+  const lines = text.trim().split(/\r?\n/);
+  const first = lines[0]?.split(",") ?? [];
+  const hasHeader = first.length > 0 && !Number.isFinite(Number(first[1]));
+  const header = hasHeader ? lines[0] : null;
+
+  const rows: CsvRow[] = [];
+  for (const line of lines.slice(hasHeader ? 1 : 0)) {
+    const parts = line.split(",");
+    if (parts.length < 5) continue;
+    rows.push({
+      date: parts[0].trim(),
+      prices: parts.slice(1, 5).map((p) => p.trim()),
+      volume: parts.length > 5 ? parts[5].trim() : null,
+    });
+  }
+  return { header, rows };
+}
+
+/**
+ * Merge volume into an existing price file, leaving every price digit alone.
+ *
+ * The OHLC in `data/` is the research baseline: rewriting it would silently
+ * invalidate every number in the docs. So this only ever *adds* a column, keyed
+ * by date, and reports how many rows it could not match rather than guessing.
+ */
+export function mergeVolumeCsv(
+  text: string,
+  volumeByDate: ReadonlyMap<string, number>,
+): { csv: string; matched: number; unmatched: number; alreadyHadVolume: boolean } {
+  const { header, rows } = parseCsvRows(text);
+  const alreadyHadVolume = rows.some((r) => r.volume !== null && r.volume !== "");
+
+  let matched = 0;
+  let unmatched = 0;
+  const out: string[] = [];
+  const outHeader = header ?? "date,open,high,low,close,volume";
+  const headerHasVolume = outHeader.toLowerCase().includes("volume");
+  out.push(headerHasVolume ? outHeader : `${outHeader},volume`);
+
+  for (const row of rows) {
+    const v = volumeByDate.get(normaliseDate(row.date));
+    if (v === undefined) unmatched++;
+    else matched++;
+    // An unmatched row keeps its place with an empty volume field rather than
+    // a fabricated zero, so a later pass can fill it and no one mistakes a gap
+    // for "nobody traded".
+    out.push([row.date, ...row.prices, v === undefined ? "" : formatVolume(v)].join(","));
+  }
+
+  return { csv: out.join("\n") + "\n", matched, unmatched, alreadyHadVolume };
+}
+
+function normaliseDate(date: string): string {
+  const ms = Number.isFinite(Number(date)) ? Number(date) * 1000 : Date.parse(date);
+  return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : date;
+}
+
+function formatVolume(v: number): string {
+  if (!Number.isFinite(v) || v <= 0) return "";
+  return Number(v.toFixed(2)).toString();
+}

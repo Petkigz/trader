@@ -92,14 +92,53 @@ suite, and can only ever *refuse* an entry — but they stay out of the trading 
 clears its bar, because "the bot should know this" and "this makes the bot better" are different
 claims and only the second one is allowed to touch money.
 
-Two honest caveats:
+Three honest caveats:
 
-- **The volume gate is untested, not rejected.** The offline CSVs carry no volume column, so the
-  backtester has never seen flow. It is a real gap: testing it needs a panel fetched with volume.
-  The script now reports it as UNTESTED rather than printing a zero that looks like a result.
 - **72% agreement is not 100%.** The remaining 28% of days are exactly where a market filter would
   act, and on this panel they were not worth enough to clear the bar. That could change with a
   different rule — which is what the pre-registered machinery is for.
+- **The cost gate does not just fail, it hurts.** It blocks the five highest-volatility entries in
+  eight years, which are precisely the ones that pay. That is the shape of a plausible-sounding rule
+  that destroys an edge, and the argument for measuring before wiring.
+
+### 2a-i. Volume: the proxy was tested, and it lost
+
+Every CSV in this repo is `date,open,high,low,close`. No volume, ever, so the backtester has never
+seen flow. The closest observable stand-in in OHLC is **range expansion** — today's true range
+against its trailing average — which asks a related question ("did anything actually happen here?")
+without pretending to be volume.
+
+Tested as a gate (skip entries on a bar whose range is under 0.7× its average, 2024+, same bar as
+everything else):
+
+| Gate | Entries blocked | OOS edge/mo | Interval | Verdict |
+|---|---|---|---|---|
+| participation (proxy) | 32 | −0.034% | −0.13% to +0.04% | **inside the bar, and negative** |
+
+So the hypothesis "a quiet bar is a worse thing to buy" is not supported on this panel — if anything,
+the quiet entries did slightly better. That is what the proxy says. It is not the last word, because
+range is not flow.
+
+### 2a-ii. Getting real volume, in one command
+
+```bash
+npm run fetch:volume -- --check     # report what would change
+npm run fetch:volume -- --write     # fetch klines and merge the volume column
+```
+
+The script pulls daily klines from the exchange and merges **only volume** into the existing files:
+
+- every OHLC digit is left exactly as published, because those files are the research baseline;
+- a date the venue cannot supply is left **blank, not zero** — a blank can be filled later, a zero
+  would read as "nobody traded";
+- re-running is idempotent;
+- the non-crypto panel is reported as unsupported rather than silently skipped: Binance has no
+  series for back-adjusted continuous futures.
+
+It requires outbound access to the exchange. **This sandbox has none**, so the merge is unit-tested
+offline and the fetch itself is not: run it where the network exists, then re-run `npm run context`.
+The script detects the volume column and switches the gate from the proxy to the real thing by
+itself — no config flag, no chance of quoting a proxy as a volume result.
 
 ## 3. What it does instead: it lets you search, honestly
 

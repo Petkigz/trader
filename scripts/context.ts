@@ -41,7 +41,22 @@ const START = Date.parse("2020-01-01");
 /** Judgement window: the same one the challengers are held to. */
 const JUDGE_FROM = "2024-01";
 const REFERENCE = "BTCUSDT";
-const GATES: GateName[] = ["market", "volume", "cost"];
+/**
+ * Which gates are tried depends on what the panel can support.
+ *
+ * With a volume column the flow gate gets its real trial. Without one — every
+ * CSV in this repo — the same question is asked with range expansion, and the
+ * output says "participation (proxy)" so nobody can quote it as a volume
+ * result. When `npm run fetch:volume` has been run, this switches over by
+ * itself.
+ */
+function gatesFor(hasVolumeData: boolean): GateName[] {
+  return hasVolumeData ? ["market", "volume", "cost"] : ["market", "participation", "cost"];
+}
+
+const GATE_LABEL: Partial<Record<GateName, string>> = {
+  participation: "participation (proxy)",
+};
 
 async function loadPanel(dir: string): Promise<Array<{ symbol: string; candles: Candle[] }>> {
   const files = (await readdir(dir)).filter((f) => f.endsWith(".csv")).sort();
@@ -178,8 +193,9 @@ async function main(): Promise<void> {
   /* ------------------------------------------------------ does it improve anything? */
 
   const reference2 = reference;
+  const gates = gatesFor(volumeAvailable);
   const runs = new Map<string, RunOutcome[]>();
-  for (const gate of ["off", ...GATES] as GateName[]) {
+  for (const gate of ["off", ...gates] as GateName[]) {
     const outs: RunOutcome[] = [];
     for (const { symbol, candles } of panel) {
       const ctx = contextSeries(candles, reference2, opts);
@@ -190,17 +206,25 @@ async function main(): Promise<void> {
 
   const base = runs.get("off")!;
   const baseOos = base.map((r) => ({ symbol: r.symbol, monthly: since(r.monthly, JUDGE_FROM) }));
-  const attempts = GATES.length;
+  const attempts = gates.length;
   const bar = requiredEdgeSE(attempts);
 
-  console.log(`gates judged on ${JUDGE_FROM}+ · bar for ${attempts} attempts (${bar.toFixed(2)} sigma)\n`);
+  console.log(`gates judged on ${JUDGE_FROM}+ · bar for ${attempts} attempts (${bar.toFixed(2)} sigma)`);
+  if (!volumeAvailable) {
+    console.log(
+      "volume is absent from these files, so the flow question is asked with range\n" +
+        "expansion instead — a participation proxy, not volume. Run `npm run fetch:volume`\n" +
+        "to give the real gate its trial.",
+    );
+  }
+  console.log();
   console.log(
     `${"gate".padEnd(8)} ${"entries".padStart(8)} ${"trades".padStart(7)} ${"OOS/mo".padStart(9)} ` +
       `${"edge".padStart(8)} ${"SE".padStart(7)} ${"verdict".padStart(9)}`,
   );
   console.log("-".repeat(62));
 
-  for (const gate of GATES) {
+  for (const gate of gates) {
     const variant = runs.get(gate)!;
     const variantOos: MonthlyRow[] = variant.map((r) => ({
       symbol: r.symbol,
@@ -217,11 +241,11 @@ async function main(): Promise<void> {
     const blocked = baseTrades - trades;
     // A gate that blocked nothing has not been tested. Saying "inside the bar"
     // would dress a missing input up as a measured result.
-    const untested = blocked === 0 || (gate === "volume" && !volumeAvailable);
+    const untested = blocked === 0;
     const clears = !untested && boot.lo95 > 0;
 
     console.log(
-      `${gate.padEnd(8)} ${String(baseTrades - trades).padStart(8)} ` +
+      `${(GATE_LABEL[gate] ?? gate).padEnd(8)} ${String(baseTrades - trades).padStart(8)} ` +
         `${String(trades).padStart(7)} ` +
         `${(oosMean * 100).toFixed(2).padStart(9)} ` +
         `${(boot.observed * 100).toFixed(3).padStart(8)} ` +
