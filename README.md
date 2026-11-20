@@ -197,7 +197,14 @@ npm run backtest -- --synthetic                    # offline, deterministic
 
 The bot is designed for a free tier: one daily cron and one Postgres row.
 
-**1. Database.** Create a Supabase project, then run `supabase/migrations/0001_init.sql` in the SQL editor. It creates three tables, an atomic lock function, and RLS with no policies (so only the service key can touch it).
+**1. Database.** Create a **new, empty** Supabase project, then run `supabase/migrations/0001_init.sql` in the SQL editor. It creates three tables (`bot_state`, `trades`, `ticks`), an atomic lock function, and RLS with no policies (so only the service key can touch it).
+
+The bot needs nothing else — candles come from the exchange API at tick time, and price history is not stored. (The SQL cross-check in `docs/BACKTEST.md` used a throwaway `market_daily` table to replay candles inside Postgres; it is not part of the schema and is not required to run.)
+
+> **Use a dedicated project. Never run this against your app's database.**
+> The migration writes to `public.` and inserts a row into `supabase_migrations.schema_migrations`. Dropped into a live project it will sit next to your real tables, share the 500 MB database / 5 GB egress quota, and show up in your migration history alongside production schema changes. Rollback means dropping bot-owned objects by name, which is exactly the kind of surgical cleanup nobody wants to do on a Friday.
+>
+> The free tier allows **2 projects** — spend one on the bot. If you must share a project, first rewrite every identifier in the migration to a dedicated schema (e.g. `autopilot.bot_state`) and set `search_path` accordingly; the file as shipped is not schema-agnostic. Then re-point the `Store` at that schema. Sharing `public` is not a supported configuration.
 
 > **Free-tier pause — the biggest operational risk in this design.** Supabase pauses free projects after **7 consecutive days with no database activity**, and a paused project stays dark until you manually restore it. In normal operation the daily tick *is* the keep-alive, so this is safe. But if ticks start failing for a week, the project pauses and everything stops silently. Point a free uptime monitor at `/api/health` — it reads the database, so it keeps the project awake *and* alerts you when a tick is overdue. Do this.
 
