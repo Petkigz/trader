@@ -5,8 +5,11 @@ import {
   capitalFor,
   chaseMultiplier,
   expectedPerDay,
+  daysToCloseGap,
+  escapeVelocity,
   goalStatus,
   planParticipation,
+  recoveryStats,
   utcMidnight,
   type GoalConfig,
   type GoalStatus,
@@ -63,12 +66,14 @@ test("pressure never softens the language about what is unreachable", () => {
   assert.match(s.verdict, /gap grows/);
 });
 
-test("a growing account that is still far short hears the harsher verdict", () => {
-  // $20 after a year of gains: the gap is smaller and the rate still absurd.
+test("a growing account is told what it is short of, not just that it is short", () => {
+  // $20 after a year of gains: doubling, which is 100%/yr and still not enough.
   const s = goalStatus(cfg, 20, day(365));
   assert.equal(s.pressure, "unreachable");
-  assert.ok((s.requiredDailyReturn30d ?? 0) > 0.05);
-  assert.match(s.verdict, /lottery ticket/);
+  assert.equal(s.aboveEscapeVelocity, false);
+  // The message names the threshold, because that is the actionable number.
+  assert.match(s.verdict, /escape velocity/);
+  assert.ok(Number.isFinite(s.escapeVelocity));
 });
 
 test("a sub-month history does not claim a CAGR it cannot support", () => {
@@ -230,4 +235,61 @@ test("the status snapshot reports a deficit and still never blocks entries", asy
   assert.ok(s.goal.deficit > 0, "equity is below the line, so the gap is real");
   assert.equal(s.goal.entriesBlockedByGoal, false);
   assert.ok(s.goal.verdict.length > 0);
+});
+
+test("escape velocity is the balance at which growth out-earns the line", () => {
+  // $1/day at 30%/yr: ~$1,400 of capital, because a smaller balance grows by
+  // less than a dollar a day and the line walks away from it for ever.
+  const ev = escapeVelocity(1, 0.3);
+  assert.ok(ev > 1300 && ev < 1450, `got ${ev}`);
+  assert.equal(escapeVelocity(1, 0), Infinity);
+  // Roughly twice the rate, roughly half the balance (not exactly: the
+  // threshold is a daily compound, not a linear annualisation).
+  const double = escapeVelocity(1, 0.6);
+  assert.ok(double < ev && Math.abs(double - ev / 2) < ev * 0.2, `got ${double}`);
+});
+
+test("above escape velocity the gap closes, below it the gap never closes", () => {
+  // Doubling over eight years is ~9%/yr: the line walks away for ever.
+  const poor = goalStatus({ ...cfg, startEquity: 10 }, 20, day(3000));
+  assert.equal(poor.aboveEscapeVelocity, false);
+  // It does close one day — around 88 years out — so the honest answer inside a
+  // 30-year horizon is "no".
+  assert.equal(daysToCloseGap({ ...cfg }, 20, 3000, poor.achievedCagr), null);
+  assert.equal(daysToCloseGap({ ...cfg }, 20, 3000, poor.achievedCagr, 40000) !== null, true);
+
+  // $1,500 after 8 years: 84%/yr, past the threshold, so the line is catchable.
+  const rich = goalStatus({ ...cfg, startEquity: 10 }, 1500, day(3000));
+  assert.equal(rich.aboveEscapeVelocity, true);
+  assert.ok(rich.deficit > 0, "still behind the line — that is the point");
+  const days = daysToCloseGap({ ...cfg }, 1500, 3000, rich.achievedCagr);
+  assert.ok(days !== null && days > 30 && days < 5000, `got ${days}`);
+});
+
+test("recovery measures the old peak, not a green day", () => {
+  const curve = [
+    { ts: day(0), equity: 10 },
+    { ts: day(1), equity: 9 },
+    { ts: day(2), equity: 8 },
+    { ts: day(20), equity: 11 }, // recovered: back above 10
+    { ts: day(21), equity: 10.5 },
+    { ts: day(100), equity: 12 }, // recovered again
+    { ts: day(101), equity: 9 }, // still under water at the end
+  ];
+  const r = recoveryStats(curve);
+  assert.equal(r.episodes, 3);
+  assert.equal(r.recoveredWithin30, 1, "only the 18-day dip is quick");
+  assert.equal(r.recoveredWithin90, 2, "the 79-day dip is recovered but slow");
+  assert.equal(r.neverRecovered, 1);
+  assert.ok(r.daysUnderwaterPct > 0 && r.daysUnderwaterPct < 100);
+  assert.ok(r.medianRecoveryDays !== null);
+});
+
+test("an account that only ever rises has no drawdown to recover", () => {
+  const curve = Array.from({ length: 10 }, (_, i) => ({ ts: day(i), equity: 10 + i }));
+  const r = recoveryStats(curve);
+  assert.equal(r.episodes, 0);
+  assert.equal(r.neverRecovered, 0);
+  assert.equal(r.medianRecoveryDays, null);
+  assert.equal(r.daysUnderwaterPct, 0);
 });

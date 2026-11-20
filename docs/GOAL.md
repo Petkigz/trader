@@ -80,6 +80,61 @@ plannedRiskMultiplier(...) -> 1     // always, by construction
 and a test asserts it. The ledger may change what we know and what we report. It may never change
 how much is risked.
 
+## 2a. Assuming it profits: does it cover the losses? — mostly yes, and fast
+
+Fair correction to §1: measuring on day one makes the label a verdict instead of a starting
+state. The question that matters is what happens *once the account is earning*.
+
+```bash
+npm run recover -- --dir=data/real
+```
+
+Drawdown episodes of 5% or more, champion strategy, 20 assets, 2020→now:
+
+| Measure | Value |
+|---|---|
+| Drawdowns of 5%+ | 197 |
+| Covered within 90 days | 171 (87%) |
+| Covered within a year | 174 (88%) |
+| Still open at the end of the record | 20 |
+| Median time to regain the lost high | **6 days** |
+| Longest single stretch under water | **1,085 days** |
+| Median share of days 5%+ below a high | 98% |
+
+So the intuition is right on this point: **losses are covered by continuing to trade at normal
+size, and usually quickly.** Six days of median recovery is ordinary. The 1,085-day stretch is the
+one to remember, because it is the case where "tomorrow" is three years away.
+
+What is *not* true is that a deficit can be pulled up by earning more. And there is now an exact
+reason why.
+
+## 2b. Escape velocity: why a dollar target can't be caught from below
+
+Growth per day is `equity × dailyRate`. A +$1/day line advances by exactly $1/day. So the line only
+stops outrunning the account when:
+
+```
+equity × dailyRate > $1        →        equity > 1 / dailyRate   ("escape velocity")
+```
+
+At the measured 30%/yr, that threshold is **$1,392**. Below it, each day adds less than the line
+does, so the gap widens — not because the bot is unlucky, but because $10 cannot generate a dollar
+a day. Above it, the surplus compounds and the line stops mattering.
+
+That reshapes §1's harsh label. "Unreachable" is not a claim that the goal is impossible for
+everyone; it is a statement that **this balance is below escape velocity**. The ledger now reports
+the threshold, whether the account is past it, and how long reaching it would take:
+
+- accounts past the threshold after 6.3 years: **0/20**
+- median final equity: **$18.17**, i.e. **$1,373 short**
+- median years to reach the threshold at each asset's own achieved rate: **16** (best asset, 63%/yr,
+  needs $750 and still ends far below it)
+
+There is one more nuance worth stating precisely: growth compounds, so a positive rate *does*
+eventually beat a linear line — around 88 years out for a 9%/yr account starting near $20. That is
+why `daysToCloseGap` reports "not within 30 years" rather than "never". The distinction matters
+because "never" invites argument and "88 years" does not.
+
 ## 3. "Trade when there are opportunities, not to a quota" — already true, with a catch
 
 There is no quota anywhere in the engine. No rule stops trading because a target was hit; the only
@@ -104,8 +159,10 @@ lost money on 31 non-crypto futures markets**. More trading was available. It wa
 - Claimed: the deficit is visible, per day, in the dashboard and the API.
 - Claimed: catching up on size makes outcomes worse, measured five ways.
 - Claimed: nothing in the engine trades to a quota.
-- Not claimed: that the bot will reach $1/day. On $10 it cannot; the target needs roughly $3,700 of
-  capital at the measured rate, or a fundamentally different edge — not a different sizing rule.
+- Claimed, with data: 88% of 5%+ drawdowns were recovered, median 6 days.
+- Not claimed: that the bot will reach $1/day. At the measured median rate it needs about $1,400 of
+  capital to be at escape velocity at all, and $3,700 to earn $1/day on average — or a fundamentally
+  different edge. Not a different sizing rule.
 
 The next honest step is not a bigger position after a bad day. It is capital, or a strategy that
 beats the champion out of sample. Neither is something a sizing rule can fake.

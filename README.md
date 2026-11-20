@@ -522,6 +522,14 @@ one cycle.
 npm run catchup -- --dir=data/real
 ```
 
+```bash
+npm run recover -- --dir=data/real
+```
+
+Losses get covered by ordinary trading: 88% of 5%+ drawdowns were recovered, median 6 days. What
+does *not* work is catching up by size — below "escape velocity" (~$1,400 at 30%/yr) a $1/day line
+advances faster than the account can, so the gap widens no matter how the positions are sized.
+
 The bot reports where the account stands against +$1/day: deficit, today's P&L, and how long the
 gap takes to close at the rate actually achieved. The ledger may change what it *reports*; it is
 never allowed to change how much it *risks* — `plannedRiskMultiplier` returns 1 by construction and

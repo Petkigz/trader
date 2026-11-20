@@ -29,8 +29,14 @@ export interface GoalConfig {
   startEquity: number;
   /** Anchor time (ms). Normalised to UTC midnight by the ledger. */
   startDate: number;
-  /** USDT per day the line rises. */
+  /** USDT per day the line rises. Ignored when `dailyRate` is set. */
   dailyTarget: number;
+  /**
+   * Optional proportional target instead of a dollar one, e.g. 0.0008 for
+   * ~0.08%/day (~34%/yr). A proportional line is self-covering: a loss shrinks
+   * the base, so tomorrow's demand shrinks with it. A dollar line is not.
+   */
+  dailyRate?: number;
 }
 
 export type Pressure = "ahead" | "on-track" | "behind" | "deep-behind" | "unreachable";
@@ -52,8 +58,18 @@ export interface GoalStatus {
   achievedCagr: number | null;
   /** Required daily return over the next 30 days to close the gap. Null if no gap. */
   requiredDailyReturn30d: number | null;
-  /** Days to close the gap at the achieved rate. Null when never / no gap. */
+  /**
+   * Days to close the gap if the account compounds at the rate it has actually
+   * achieved. Null when the gap never closes at that rate — which is the normal
+   * case for a dollar target, see `escapeVelocity`.
+   */
   daysToCloseAtAchievedRate: number | null;
+  /** Equity at which growth alone out-earns the daily target. */
+  escapeVelocity: number;
+  /** True when equity is past that threshold, so surplus can compound. */
+  aboveEscapeVelocity: boolean;
+  /** Years to reach the threshold at the achieved rate. Null if never. */
+  yearsToEscapeVelocity: number | null;
   pressure: Pressure;
   /** Plain-language read on the arithmetic, for the dashboard. */
   verdict: string;
@@ -99,6 +115,19 @@ export function goalStatus(
 
   const pressure = classify(deficit, surplus, eq, requiredDailyReturn30d);
 
+  // The threshold that decides whether a *dollar* target can ever be caught up:
+  // growth per day is equity × r, so the line only stops outrunning you once
+  // equity × r > dailyTarget.
+  const dailyR = achievedCagr !== null ? Math.pow(1 + achievedCagr, 1 / 365.25) - 1 : null;
+  const escape = dailyR !== null && dailyR > 0 ? cfg.dailyTarget / dailyR : Infinity;
+  const aboveEscape = Number.isFinite(escape) && eq >= escape;
+  const yearsToEscape =
+    dailyR !== null && dailyR > 0 && eq > 0 && !aboveEscape && achievedCagr !== null
+      ? Math.log(escape / eq) / Math.log(1 + achievedCagr)
+      : aboveEscape
+        ? 0
+        : null;
+
   return {
     daysElapsed,
     targetEquity,
@@ -110,6 +139,9 @@ export function goalStatus(
     achievedCagr,
     requiredDailyReturn30d,
     daysToCloseAtAchievedRate,
+    escapeVelocity: escape,
+    aboveEscapeVelocity: aboveEscape,
+    yearsToEscapeVelocity: yearsToEscape,
     pressure,
     verdict: explain({
       pressure,
@@ -119,6 +151,10 @@ export function goalStatus(
       requiredDailyReturn30d,
       daysToCloseAtAchievedRate,
       daysElapsed,
+      escape,
+      aboveEscape,
+      yearsToEscape,
+      dailyTarget: cfg.dailyTarget,
     }),
   };
 }
@@ -159,17 +195,38 @@ function explain(ctx: {
   requiredDailyReturn30d: number | null;
   daysToCloseAtAchievedRate: number | null;
   daysElapsed: number;
+  escape: number;
+  aboveEscape: boolean;
+  yearsToEscape: number | null;
+  dailyTarget: number;
 }): string {
   const money = (x: number) => `$${x.toFixed(2)}`;
-  if (ctx.pressure === "ahead") {
-    return `ahead of the line — nothing to catch up`;
-  }
+  if (ctx.pressure === "ahead") return "ahead of the line — nothing to catch up";
   if (ctx.equity <= 0) return "no equity left; the goal line is moot";
-  // Report the direction of travel first: "the gap is growing" is more useful
-  // news than "the target is unreachable", and often the reason it is.
+
+  // "The gap is growing" is more useful news than "the target is unreachable",
+  // and is usually the reason it is.
   if (ctx.deficit > 0 && ctx.achievedPerDay <= 0) {
     return `behind ${money(ctx.deficit)} and not currently gaining — the gap grows, not shrinks`;
   }
+
+  // The structural fact about a dollar target: below the escape threshold,
+  // growth per day is smaller than the daily demand, so the line outruns the
+  // account no matter how patient it is.
+  if (!ctx.aboveEscape && Number.isFinite(ctx.escape)) {
+    const years = ctx.yearsToEscape;
+    const when =
+      years === null || years > 30
+        ? "not within 30 years at the rate achieved so far"
+        : years < 1
+          ? `about ${Math.round(years * 12)} months at the rate achieved so far`
+          : `about ${years.toFixed(0)} years at the rate achieved so far`;
+    return (
+      `below escape velocity: +$${ctx.dailyTarget}/day needs ${money(ctx.escape)} of equity before ` +
+      `growth alone can out-earn the line. Reaching it: ${when}.`
+    );
+  }
+
   if (ctx.pressure === "unreachable") {
     const r = ctx.requiredDailyReturn30d ?? 0;
     return (
@@ -181,9 +238,163 @@ function explain(ctx: {
     return `behind ${money(ctx.deficit)}`;
   }
   return (
-    `behind ${money(ctx.deficit)}; at the rate achieved so far that is ` +
-    `${Math.round(ctx.daysToCloseAtAchievedRate)} more days`
+    `behind ${money(ctx.deficit)}; compounding at the achieved rate closes it in ` +
+    `${Math.round(ctx.daysToCloseAtAchievedRate)} days`
   );
+}
+
+/* ------------------------------------------------------------------------- */
+/* Covering losses: can a dollar line ever be caught, and how long underwater */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Equity at which one day's growth equals the daily target.
+ *
+ * Below it, the goal line advances faster than the account does, so every loss
+ * is permanent and the deficit only widens with time. Above it, the surplus
+ * compounds and the line becomes irrelevant. This is the whole arithmetic of
+ * "cover the losses later", and it is a property of the balance, not of nerve.
+ */
+export function escapeVelocity(dailyTarget: number, cagr: number): number {
+  if (!(cagr > 0)) return Infinity;
+  const dailyRate = Math.pow(1 + cagr, 1 / 365.25) - 1;
+  return dailyTarget / dailyRate;
+}
+
+/**
+ * How long a dollar line takes to be caught up, compounding at `cagr`.
+ *
+ * Note that a positive compound rate *always* beats a linear line eventually —
+ * the honest question is whether "eventually" is inside a human horizon. The
+ * default cut-off is 30 years; beyond that the answer is reported as null, and
+ * the caller says "not within 30 years" rather than "never".
+ */
+export function daysToCloseGap(
+  cfg: GoalConfig,
+  equity: number,
+  daysElapsed: number,
+  cagr: number | null,
+  horizonDays = 10958, // 30 years
+): number | null {
+  if (cagr === null || !(cagr > 0) || !(equity > 0)) return null;
+  const daily = Math.pow(1 + cagr, 1 / 365.25) - 1;
+  let eq = equity;
+  for (let d = 1; d <= horizonDays; d++) {
+    eq *= 1 + daily;
+    if (eq >= cfg.startEquity + cfg.dailyTarget * (daysElapsed + d)) return d;
+  }
+  return null;
+}
+
+export interface RecoveryStats {
+  /** Share of days spent below a previous peak. */
+  daysUnderwaterPct: number;
+  /** Distinct drawdown episodes (a new high ends one). */
+  episodes: number;
+  recoveredWithin30: number;
+  recoveredWithin90: number;
+  recoveredWithin365: number;
+  neverRecovered: number;
+  /** Median days from the trough of an episode to the old peak. Null if none. */
+  medianRecoveryDays: number | null;
+  longestUnderwaterDays: number;
+}
+
+/**
+ * Did the account actually cover its own losses?
+ *
+ * Every dip below a previous peak is an episode, and an episode is only
+ * "recovered" when the old peak is regained — not when the day is green. This is
+ * the empirical answer to "it can continue tomorrow and make the loss back",
+ * measured on what the strategy really did rather than on what it should.
+ */
+export function recoveryStats(
+  curve: readonly { ts: number; equity: number }[],
+  opts: { minDrawdownPct?: number } = {},
+): RecoveryStats {
+  // Without a floor, every one-day wobble counts as a drawdown and the median
+  // "recovery time" becomes a measure of daily noise. 5% is the smallest dip a
+  // person would actually call a loss.
+  const minDrawdown = (opts.minDrawdownPct ?? 0) / 100;
+  if (curve.length === 0) {
+    return {
+      daysUnderwaterPct: 0,
+      episodes: 0,
+      recoveredWithin30: 0,
+      recoveredWithin90: 0,
+      recoveredWithin365: 0,
+      neverRecovered: 0,
+      medianRecoveryDays: null,
+      longestUnderwaterDays: 0,
+    };
+  }
+
+  let peak = curve[0].equity;
+  let underwater = 0;   // bars at least `minDrawdown` below a previous high
+  let deep = 0;
+  let troughEquity = peak;
+  let troughTs: number | null = null;
+  let inEpisode = false;
+
+  let episodes = 0;
+  let r30 = 0;
+  let r90 = 0;
+  let r365 = 0;
+  let never = 0;
+  let longest = 0;
+  const recoveryDays: number[] = [];
+
+  for (const p of curve) {
+    if (p.equity >= peak) {
+      if (inEpisode && troughTs !== null) {
+        episodes++;
+        const days = (p.ts - troughTs) / DAY_MS;
+        recoveryDays.push(days);
+        longest = Math.max(longest, days);
+        if (days <= 30) r30++;
+        if (days <= 90) r90++;
+        if (days <= 365) r365++;
+      }
+      peak = p.equity;
+      troughEquity = peak;
+      troughTs = null;
+      inEpisode = false;
+    } else {
+      underwater++;
+      if (peak > 0 && (peak - p.equity) / peak >= minDrawdown) deep++;
+      if (p.equity < troughEquity) {
+        troughEquity = p.equity;
+        troughTs = p.ts;
+      }
+      const deepEnough = peak > 0 && (peak - p.equity) / peak >= minDrawdown;
+      if (deepEnough) inEpisode = true;
+    }
+  }
+  if (inEpisode) {
+    // Still under water at the end of the record: count it as unrecovered, and
+    // measure it from the trough so "how long so far" is honest.
+    never++;
+    episodes++;
+    if (troughTs !== null) longest = Math.max(longest, (curve[curve.length - 1].ts - troughTs) / DAY_MS);
+  }
+
+  recoveryDays.sort((a, b) => a - b);
+  const mid = recoveryDays.length >> 1;
+  return {
+    daysUnderwaterPct: (deep / curve.length) * 100,
+    episodes,
+    recoveredWithin30: r30,
+    recoveredWithin90: r90,
+    recoveredWithin365: r365,
+    neverRecovered: never,
+    medianRecoveryDays:
+      recoveryDays.length === 0
+        ? null
+        : recoveryDays.length % 2 === 0
+          ? (recoveryDays[mid - 1] + recoveryDays[mid]) / 2
+          : recoveryDays[mid],
+    longestUnderwaterDays: longest,
+  };
 }
 
 /* ------------------------------------------------------------------------- */
