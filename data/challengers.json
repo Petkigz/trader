@@ -1,0 +1,368 @@
+[
+  {
+    "spec": {
+      "id": "meanrev-rsi35",
+      "strategy": "meanrev",
+      "env": {
+        "ENSEMBLE_RSI_ENTRY": "35",
+        "ENSEMBLE_RSI_EXIT": "55"
+      },
+      "hypothesis": "Buying oversold RSI dips while above the long EMA beats waiting for a breakout, in the chop that follows crypto rallies.",
+      "minDecisions": 100,
+      "registeredAt": 1795193725622
+    },
+    "status": "shadow",
+    "updatedAt": 1795193726001,
+    "outcome": {
+      "decisions": 26,
+      "returnPct": 0.0012356896551724318,
+      "sharpe": 0.043000000000000003,
+      "championReturnPct": 0.008908620689655172,
+      "championSharpe": 0.012000000000000016,
+      "perAsset": [
+        {
+          "symbol": "ADAUSDT",
+          "returnPctDiff": 0.27130000000000004
+        },
+        {
+          "symbol": "ALGOUSDT",
+          "returnPctDiff": 0.14800000000000002
+        },
+        {
+          "symbol": "ATOMUSDT",
+          "returnPctDiff": 0.485
+        },
+        {
+          "symbol": "BCHUSDT",
+          "returnPctDiff": 0.5846
+        },
+        {
+          "symbol": "BNBUSDT",
+          "returnPctDiff": 0.0058
+        },
+        {
+          "symbol": "BTCUSDT",
+          "returnPctDiff": -0.1738
+        },
+        {
+          "symbol": "DOGEUSDT",
+          "returnPctDiff": 0.33249999999999996
+        },
+        {
+          "symbol": "ETCUSDT",
+          "returnPctDiff": 0.278
+        },
+        {
+          "symbol": "ETHUSDT",
+          "returnPctDiff": 0.24330000000000002
+        },
+        {
+          "symbol": "IOTAUSDT",
+          "returnPctDiff": 0.498
+        },
+        {
+          "symbol": "LINKUSDT",
+          "returnPctDiff": -0.08080000000000004
+        },
+        {
+          "symbol": "LTCUSDT",
+          "returnPctDiff": -0.0232
+        },
+        {
+          "symbol": "NEOUSDT",
+          "returnPctDiff": 0.1986
+        },
+        {
+          "symbol": "ONTUSDT",
+          "returnPctDiff": 0.5029
+        },
+        {
+          "symbol": "QTUMUSDT",
+          "returnPctDiff": 0.539
+        },
+        {
+          "symbol": "THETAUSDT",
+          "returnPctDiff": 0.19010000000000002
+        },
+        {
+          "symbol": "TRXUSDT",
+          "returnPctDiff": -0.8408
+        },
+        {
+          "symbol": "VETUSDT",
+          "returnPctDiff": 0.1898
+        },
+        {
+          "symbol": "XLMUSDT",
+          "returnPctDiff": -0.4205
+        },
+        {
+          "symbol": "XRPUSDT",
+          "returnPctDiff": -0.46789999999999987
+        }
+      ]
+    },
+    "verdict": {
+      "promote": false,
+      "reasons": [
+        "insufficient sample: 26 shadow decisions, floor is 100",
+        "replication on 31 non-crypto instruments: edge -1.3%/yr, 19/31 improved → FAILS"
+      ],
+      "required": {
+        "minDecisions": 100,
+        "minEdgePct": 0,
+        "attempts": 1
+      },
+      "observed": {
+        "decisions": 26,
+        "edgePct": -0.0076729310344827405,
+        "edgeSharpe": 0.030999999999999986
+      }
+    }
+  },
+  {
+    "spec": {
+      "id": "ensemble-w60",
+      "strategy": "ensemble",
+      "env": {
+        "ENSEMBLE_SCORE_WINDOW": "60"
+      },
+      "hypothesis": "A faster 60-bar scoring window lets the ensemble rotate into mean reversion sooner than the default 120, improving returns in mixed regimes.",
+      "minDecisions": 100,
+      "registeredAt": 1795193726898
+    },
+    "status": "shadow",
+    "updatedAt": 1795193727793,
+    "outcome": {
+      "decisions": 171,
+      "returnPct": 0.010859310344827587,
+      "sharpe": 0.08299999999999999,
+      "championReturnPct": 0.008908620689655172,
+      "championSharpe": 0.012000000000000016,
+      "perAsset": [
+        {
+          "symbol": "ADAUSDT",
+          "returnPctDiff": 0.25510000000000005
+        },
+        {
+          "symbol": "ALGOUSDT",
+          "returnPctDiff": 0.12940000000000002
+        },
+        {
+          "symbol": "ATOMUSDT",
+          "returnPctDiff": 0.2254
+        },
+        {
+          "symbol": "BCHUSDT",
+          "returnPctDiff": 0.0052000000000000934
+        },
+        {
+          "symbol": "BNBUSDT",
+          "returnPctDiff": 0.13090000000000002
+        },
+        {
+          "symbol": "BTCUSDT",
+          "returnPctDiff": 0.032100000000000004
+        },
+        {
+          "symbol": "DOGEUSDT",
+          "returnPctDiff": 0.2859
+        },
+        {
+          "symbol": "ETCUSDT",
+          "returnPctDiff": 0.07030000000000003
+        },
+        {
+          "symbol": "ETHUSDT",
+          "returnPctDiff": 0.02099999999999999
+        },
+        {
+          "symbol": "IOTAUSDT",
+          "returnPctDiff": 0.18369999999999997
+        },
+        {
+          "symbol": "LINKUSDT",
+          "returnPctDiff": 0.27179999999999993
+        },
+        {
+          "symbol": "LTCUSDT",
+          "returnPctDiff": 0.08080000000000001
+        },
+        {
+          "symbol": "NEOUSDT",
+          "returnPctDiff": -0.015199999999999991
+        },
+        {
+          "symbol": "ONTUSDT",
+          "returnPctDiff": 0.07150000000000001
+        },
+        {
+          "symbol": "QTUMUSDT",
+          "returnPctDiff": -0.0464
+        },
+        {
+          "symbol": "THETAUSDT",
+          "returnPctDiff": -0.0020000000000000018
+        },
+        {
+          "symbol": "TRXUSDT",
+          "returnPctDiff": -0.36449999999999994
+        },
+        {
+          "symbol": "VETUSDT",
+          "returnPctDiff": -0.12360000000000002
+        },
+        {
+          "symbol": "XLMUSDT",
+          "returnPctDiff": 1.5299999999999998
+        },
+        {
+          "symbol": "XRPUSDT",
+          "returnPctDiff": 1.4409
+        }
+      ]
+    },
+    "verdict": {
+      "promote": false,
+      "reasons": [
+        "edge +0.20% is inside the luck bar +0.21% for 2 attempts",
+        "replication on 31 non-crypto instruments: edge -0.1%/yr, 19/31 improved → FAILS"
+      ],
+      "required": {
+        "minDecisions": 100,
+        "minEdgePct": 0.0021009574168400105,
+        "attempts": 2
+      },
+      "observed": {
+        "decisions": 171,
+        "edgePct": 0.0019506896551724148,
+        "edgeSharpe": 0.07099999999999998
+      }
+    }
+  },
+  {
+    "spec": {
+      "id": "trend-ema100",
+      "strategy": "trend",
+      "env": {
+        "TREND_EMA_PERIOD": "100"
+      },
+      "hypothesis": "A 100-day trend filter reacts faster than 200 and captures crypto's shorter cycles, adding return without giving up much drawdown control.",
+      "minDecisions": 100,
+      "registeredAt": 1795193729382
+    },
+    "status": "shadow",
+    "updatedAt": 1795193730235,
+    "outcome": {
+      "decisions": 359,
+      "returnPct": 0.01604827586206897,
+      "sharpe": 0.04100000000000001,
+      "championReturnPct": 0.008908620689655172,
+      "championSharpe": 0.012000000000000016,
+      "perAsset": [
+        {
+          "symbol": "ADAUSDT",
+          "returnPctDiff": 0.34280000000000005
+        },
+        {
+          "symbol": "ALGOUSDT",
+          "returnPctDiff": 0.7099
+        },
+        {
+          "symbol": "ATOMUSDT",
+          "returnPctDiff": 0.04749999999999999
+        },
+        {
+          "symbol": "BCHUSDT",
+          "returnPctDiff": 0.0043000000000000815
+        },
+        {
+          "symbol": "BNBUSDT",
+          "returnPctDiff": -0.2007
+        },
+        {
+          "symbol": "BTCUSDT",
+          "returnPctDiff": -0.10200000000000001
+        },
+        {
+          "symbol": "DOGEUSDT",
+          "returnPctDiff": -0.023900000000000005
+        },
+        {
+          "symbol": "ETCUSDT",
+          "returnPctDiff": -0.1956
+        },
+        {
+          "symbol": "ETHUSDT",
+          "returnPctDiff": 0.0194
+        },
+        {
+          "symbol": "IOTAUSDT",
+          "returnPctDiff": 0.2885
+        },
+        {
+          "symbol": "LINKUSDT",
+          "returnPctDiff": -0.05490000000000003
+        },
+        {
+          "symbol": "LTCUSDT",
+          "returnPctDiff": 0.013700000000000004
+        },
+        {
+          "symbol": "NEOUSDT",
+          "returnPctDiff": -0.25980000000000003
+        },
+        {
+          "symbol": "ONTUSDT",
+          "returnPctDiff": -0.010199999999999987
+        },
+        {
+          "symbol": "QTUMUSDT",
+          "returnPctDiff": 0.047800000000000065
+        },
+        {
+          "symbol": "THETAUSDT",
+          "returnPctDiff": -0.3355
+        },
+        {
+          "symbol": "TRXUSDT",
+          "returnPctDiff": -0.25839999999999985
+        },
+        {
+          "symbol": "VETUSDT",
+          "returnPctDiff": 0.0871
+        },
+        {
+          "symbol": "XLMUSDT",
+          "returnPctDiff": -0.5048
+        },
+        {
+          "symbol": "XRPUSDT",
+          "returnPctDiff": 0.3407000000000002
+        }
+      ]
+    },
+    "verdict": {
+      "promote": false,
+      "reasons": [
+        "edge +0.71% clears the luck bar +0.29%",
+        "risk-adjusted edge positive (ΔSharpe 0.03)",
+        "50% of assets improved",
+        "promote: every gate cleared",
+        "replication on 31 non-crypto instruments: edge -0.7%/yr, 14/31 improved → FAILS",
+        "promotion withdrawn: did not replicate outside crypto",
+        "promotion withdrawn: did not replicate outside crypto"
+      ],
+      "required": {
+        "minDecisions": 100,
+        "minEdgePct": 0.0028709289058025523,
+        "attempts": 3
+      },
+      "observed": {
+        "decisions": 359,
+        "edgePct": 0.007139655172413797,
+        "edgeSharpe": 0.02899999999999999
+      }
+    }
+  }
+]

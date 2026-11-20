@@ -516,6 +516,18 @@ commodity futures back to 1972 ([`docs/ASSETCLASS.md`](docs/ASSETCLASS.md)). The
 t = −2.45)**. The gate is insurance, not alpha — and the crypto result that looked like alpha was
 one cycle.
 
+### Learning, if it is ever allowed to happen
+
+```bash
+npm run challenger -- --dir=data/real --replicate=data/realclass
+```
+
+Candidates run in shadow against their own ledger and can only take over by clearing a rule fixed
+in advance: a sample floor, a multiplicity bar that rises with every attempt ever tried, per-asset
+consistency, and replication outside crypto. Three challengers have been tried; **none survived** —
+the best one cleared every crypto gate and was withdrawn for making things worse on 31 non-crypto
+futures markets. See [`docs/LEARNING.md`](docs/LEARNING.md).
+
 ### The ensemble: regime switching
 
 ```bash

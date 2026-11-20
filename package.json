@@ -18,7 +18,8 @@
     "test": "node --test test/*.test.ts",
     "verify": "npm run typecheck && npm test",
     "xsection": "node --experimental-strip-types scripts/xsection.ts",
-    "xsmom": "node --experimental-strip-types scripts/xsmom.ts"
+    "xsmom": "node --experimental-strip-types scripts/xsmom.ts",
+    "challenger": "node --experimental-strip-types scripts/challenger.ts"
   },
   "dependencies": {},
   "devDependencies": {

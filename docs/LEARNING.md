@@ -113,17 +113,48 @@ and why the one honest test of learning in this repo was run there, and lost.
 
 ## 4. The bare minimum to build
 
-| Piece | Status |
+| Piece | Where |
 |---|---|
-| Shadow execution with its own ledger | Exists (paper mode, `src/store/`) |
-| Panel + in/out split + block bootstrap | Exists (`scripts/xsection.ts`, `src/research/stats.ts`) |
-| Luck floor / multiplicity accounting | Exists (`expectedMaxZ`, `npm run research`) |
-| Pre-registered promotion rule, in code | **Not built** |
-| Challenger registry + demotion | **Not built** |
+| Shadow execution with its own ledger | paper mode, `src/store/` |
+| Panel + in/out split + block bootstrap | `scripts/xsection.ts`, `src/research/stats.ts` |
+| Luck floor / multiplicity accounting | `expectedMaxZ`, `npm run research` |
+| **Pre-registered promotion rule** | `src/research/challengers.ts` |
+| **Challenger registry + demotion** | `ChallengerRegistry`, `data/challengers.json` |
 
-The two missing pieces are the two that make it *learning* rather than *tinkering*: a promotion rule
-fixed in advance, and a registry that remembers every challenger that was tried and failed — because
-that count is what keeps the luck floor honest.
+```bash
+npm run challenger -- --dir=data/real --replicate=data/realclass
+npm run challenger -- --list
+```
 
-Expect it to promote nothing for a long time. That is the filter doing its job, not the system
-being broken.
+## 5. What happened when it was switched on
+
+Three challengers, hypotheses written before any result was computed, judged only on
+2024-01-01 onwards:
+
+| Challenger | Verdict | Why |
+|---|---|---|
+| `meanrev-rsi35` | shadow | 26 held-out round trips, floor is 100 |
+| `ensemble-w60` | shadow | edge +0.20%/mo sits **inside** the luck bar +0.21%/mo for 2 attempts |
+| `trend-ema100` | shadow | cleared every crypto gate (+0.71%/mo vs bar +0.29%/mo) then **failed replication**: −0.7%/yr on 31 non-crypto instruments, 14/31 improved → promotion withdrawn |
+
+**Zero promotions from three attempts**, and the most instructive case is the third. EMA100 passed
+the sample floor, beat the multiplicity bar, and improved 50% of crypto assets — on crypto alone it
+looked promotable. Stage 6 withdrew it, because the same change made things worse on 31 equity, bond
+FX and commodity futures markets. That is precisely the failure this document was written to catch,
+caught by the code rather than by my judgement.
+
+### Two mistakes the build itself made
+
+Both were caught by the machinery refusing to behave, not by review:
+
+1. **A naive standard error promoted everything.** Using `sd/√n` across 20 *correlated* assets
+   understates the bar by roughly the square root of the correlation — the first run promoted
+   `ensemble-w60` and `trend-ema100` outright. Fixed by deriving the standard error from a
+   time-block bootstrap over monthly differences, which keeps cross-asset correlation inside the
+   interval.
+2. **The futures roll filter was applied to crypto.** A blunt ">50% daily move means a contract
+   roll" is right for back-adjusted futures and wrong for spot crypto, which genuinely fell 50% in
+   a day in March 2020. It silently deleted eight of twenty assets. Now opt-in per panel.
+
+Expect it to promote nothing for a long time. That is the filter doing its job, not the system being
+broken.
