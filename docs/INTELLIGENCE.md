@@ -222,6 +222,45 @@ reliably improve return, and the version of it that looked like alpha in crypto 
 
 Insurance is worth running. It is still a cost, not an income.
 
+## 4c. If a new strategy appears, how would it know?
+
+**It wouldn't.** The runtime is a closed set: `evaluate()` in `src/strategy.ts` is a `switch` over
+four names — `trend`, `pullback`, `meanrev`, `ensemble` — and anything else falls through to
+`trend`. Nothing reads research, searches a strategy space, or synthesises a rule at runtime.
+
+"New strategy" can mean three different things, and only one of them is automatic:
+
+**1. Someone publishes a better method.** The bot is unaware, forever. A human has to port it,
+and then it has to clear a gate that is written down rather than assumed:
+
+| Step | Where | What it has to survive |
+|---|---|---|
+| Implement the evaluator | `src/strategy/<name>.ts` | Pure function `StrategyInput → Decision`; no lookahead |
+| Register it | `src/strategy.ts` switch + `StrategyName` union | Fails loudly, not silently — the ensemble taught that lesson |
+| Whitelist it | `src/cli/backtest.ts` flag parser | A CLI that silently ran `trend` for every other strategy wasted a day |
+| Score it on the panel | `npm run xsection` / `npm run xsmom` | 20 assets, in-sample and out of sample, not one asset |
+| Count how many you tried | `src/research/walkforward.ts` | Must beat its own **luck floor**; the floor rises with every config tested |
+
+Expected outcome is rejection. Cross-sectional momentum went 50 configurations deep and **0 of 50
+beat simply holding BTC** out of sample. The gate exists because most ideas should not pass it.
+
+**2. A market regime changes** — chop where trend-following gets whipsawed. This is the one case
+handled at runtime: the ensemble re-scores the existing families over a trailing window and hands
+control to whichever has done better. But it can only choose among rules already compiled in, and
+measured across 20 assets it added **t = −0.01**. It adapts without learning and, so far, without
+value.
+
+**3. The exchange changes its facts** — minimum notional, lot step, tick size, a pair being
+delisted. This part is genuinely automatic: `/api/v3/exchangeInfo` is fetched and validated every
+tick (`src/exchange/binance.ts:181`), so orders are sized against current rules rather than last
+month's constants. Facts update. Formulas do not.
+
+**Why no autonomous discovery?** Multiplicity. Search *k* strategies, each scored on 33 trades, and
+the best of *k* looks good by construction — the expected maximum R² under the null is 9.18% at
+n = 40, 1.90% at n = 200, 0.11% at n = 3,400 (§4a). A machine that invents strategies and keeps the
+winner is a machine for converting noise into confidence. The only defence is the one already in
+the code: count every attempt, and require the winner to beat what luck alone would have produced.
+
 ## 5. Where the multi-venue idea actually stands
 
 The `Exchange` interface means a new venue is one adapter and nothing else in the engine
