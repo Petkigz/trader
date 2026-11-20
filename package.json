@@ -10,6 +10,7 @@
   "scripts": {
     "tick": "node --env-file-if-exists=.env src/cli/tick.ts",
     "backtest": "node --env-file-if-exists=.env src/cli/backtest.ts",
+    "research": "node --env-file-if-exists=.env src/cli/research.ts",
     "status": "node --env-file-if-exists=.env src/cli/status.ts",
     "lock": "node --env-file-if-exists=.env src/cli/halt.ts",
     "typecheck": "tsc --noEmit",

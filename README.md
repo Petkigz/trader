@@ -474,3 +474,17 @@ Checked on **20 November 2026**:
 One thing worth knowing: the bot reads **minimum notional, lot step, min quantity and tick size from the exchange at runtime**, every tick. If Binance changes those, the bot adapts without a code change — only a change to the *fee schedule* needs a config edit (`FEE_RATE`). Re-check fees before going live.
 
 See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter sensitivity sweep, and the trailing-stop experiment that I tested and rejected.
+
+### Searching for a better strategy
+
+```bash
+npm run research                    # walk-forward validation, 8 years
+npm run research -- --is=500 --oos=250
+npm run research -- --synthetic     # offline, deterministic
+```
+
+Parameters are chosen on one window and scored on the next unseen one. Every candidate tested
+is counted, and the report prints the **luck floor** — the score 15 attempts would reach by
+chance alone. A winner that cannot beat its own luck floor out of sample has been fitted, not
+found, and the harness says so. See [`docs/INTELLIGENCE.md`](docs/INTELLIGENCE.md) for why the
+bot updates its market facts automatically but never rewrites its own strategy.
