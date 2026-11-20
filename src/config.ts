@@ -42,6 +42,31 @@ export interface RiskParams {
   cooldownHours: number;
 }
 
+/**
+ * Adaptive sizing (see `src/strategy/adaptive.ts`). Off by default so the
+ * documented backtest stays exactly reproducible; switch on with
+ * `ADAPTIVE_SIZING=1` and compare with `npm run backtest`.
+ */
+export interface AdaptiveParams {
+  enabled: boolean;
+  /** Annualised volatility to target, e.g. 0.40. */
+  targetVol: number;
+  /** Days used to measure current volatility. */
+  volWindow: number;
+  /** Days used as the longer-run reference. */
+  baselineWindow: number;
+  /** Never shrink below this multiple of the configured fraction. */
+  minScale: number;
+  /** Never grow beyond this multiple. Defaults to 1 — adaptation only de-risks. */
+  maxScale: number;
+  /** Recent vol / baseline vol at which the market is considered a storm. */
+  stormMultiple: number;
+  /** Extra size cut applied in a storm. */
+  stormScale: number;
+  /** Recent vol / baseline vol below which the market is considered calm. */
+  calmMultiple: number;
+}
+
 export interface BotConfig {
   mode: Mode;
   strategy: StrategyName;
@@ -62,6 +87,7 @@ export interface BotConfig {
   slippageBps: number;
 
   risk: RiskParams;
+  adaptive: AdaptiveParams;
   trend: TrendParams;
   pullback: PullbackParams;
 
@@ -149,6 +175,18 @@ export function loadConfig(env: Env = process.env): BotConfig {
       cooldownHours: num(env, "COOLDOWN_HOURS", 4),
     },
 
+    adaptive: {
+      enabled: bool(env, "ADAPTIVE_SIZING", false),
+      targetVol: num(env, "TARGET_VOL", 0.4),
+      volWindow: num(env, "VOL_WINDOW", 20),
+      baselineWindow: num(env, "VOL_BASELINE_WINDOW", 200),
+      minScale: num(env, "ADAPTIVE_MIN_SCALE", 0.25),
+      maxScale: num(env, "ADAPTIVE_MAX_SCALE", 1),
+      stormMultiple: num(env, "STORM_VOL_MULTIPLE", 2),
+      stormScale: num(env, "STORM_SCALE", 0.5),
+      calmMultiple: num(env, "CALM_VOL_MULTIPLE", 0.7),
+    },
+
     trend: {
       emaPeriod: num(env, "TREND_EMA_PERIOD", 200),
       entryBuffer: num(env, "TREND_ENTRY_BUFFER", 0.005),
@@ -192,6 +230,18 @@ export function loadConfig(env: Env = process.env): BotConfig {
 }
 
 export function validate(cfg: BotConfig): void {
+  if (!(cfg.adaptive.targetVol > 0)) throw new Error("adaptive.targetVol must be > 0");
+  if (!(cfg.adaptive.volWindow >= 2)) throw new Error("adaptive.volWindow must be >= 2");
+  if (!(cfg.adaptive.minScale > 0 && cfg.adaptive.minScale <= 1)) {
+    throw new Error("adaptive.minScale must be in (0, 1]");
+  }
+  if (!(cfg.adaptive.maxScale >= 1)) {
+    throw new Error("adaptive.maxScale must be >= 1 (adaptation may not de-lever only by shrinking)");
+  }
+  if (!(cfg.adaptive.maxScale >= cfg.adaptive.minScale)) {
+    throw new Error("adaptive.maxScale must be >= adaptive.minScale");
+  }
+
   if (!(cfg.risk.positionFraction > 0 && cfg.risk.positionFraction <= 1)) {
     throw new Error("risk.positionFraction must be in (0, 1]");
   }

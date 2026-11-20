@@ -26,6 +26,7 @@ import type { ExchangeBundle, PaperAccount } from "./exchange/index.ts";
 import type { Exchange } from "./exchange/types.ts";
 import { costBasisFromTrades } from "./ledger.ts";
 import { applyTradeOutcome, realizedPnl, refreshRisk, sizePosition } from "./risk.ts";
+import { adaptiveFraction } from "./strategy/adaptive.ts";
 import type { Store } from "./store/types.ts";
 import { evaluate } from "./strategy.ts";
 import { emptyState } from "./types.ts";
@@ -234,7 +235,8 @@ export async function runTick(deps: EngineDeps): Promise<TickResult> {
         reason = `blocked:${risk.blockReason}`;
         detail = `signal "${decision.reason}" ignored: entries blocked by ${risk.blockReason}`;
       } else {
-        const sizing = sizePosition(cashAvailable, price, info, cfg);
+        const snap = adaptiveFraction(daily, cfg);
+        const sizing = sizePosition(cashAvailable, price, info, cfg, snap.fraction);
         if (!sizing.ok) {
           action = "HOLD";
           reason = sizing.reason;

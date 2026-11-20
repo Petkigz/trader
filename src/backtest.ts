@@ -15,6 +15,7 @@
 
 import type { BotConfig } from "./config.ts";
 import { applyTradeOutcome, realizedPnl, refreshRisk, sizePosition } from "./risk.ts";
+import { adaptiveFraction } from "./strategy/adaptive.ts";
 import { evaluate } from "./strategy.ts";
 import type { BotState, Candle, Position, SymbolInfo, TradeRecord } from "./types.ts";
 import { emptyState } from "./types.ts";
@@ -158,7 +159,8 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
       costBasis = 0;
       position = null;
     } else if (decision.action === "ENTER_LONG" && qty === 0 && !risk.entriesBlocked) {
-      const sizing = sizePosition(cash, price, info, cfg);
+      const snap = adaptiveFraction(daily.slice(0, i + 1), cfg);
+      const sizing = sizePosition(cash, price, info, cfg, snap.fraction);
       if (sizing.ok) {
         // Same fill model as PaperExchange and as Binance: quantity rounds down
         // to the lot step, commission is charged in the base asset, and only the

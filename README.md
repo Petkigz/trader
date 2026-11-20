@@ -475,6 +475,22 @@ One thing worth knowing: the bot reads **minimum notional, lot step, min quantit
 
 See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter sensitivity sweep, and the trailing-stop experiment that I tested and rejected.
 
+### Adaptive sizing
+
+The bot can change its own exposure in response to market state — volatility targeting, on by
+default only when you ask for it:
+
+```bash
+ADAPTIVE_SIZING=1 npm run backtest -- --years=8     # compare against the static run
+ADAPTIVE_SIZING=1 TARGET_VOL=0.3 STORM_SCALE=0.5 npm run tick
+```
+
+It measures recent volatility and scales the position against it, so exposure shrinks exactly
+when the market gets violent. Deliberately one-sided: `ADAPTIVE_MAX_SCALE` defaults to 1, so it
+can reduce risk but never enlarge a position beyond the configured fraction. It changes *how
+much* is committed, never the entry or exit rules. Measured behaviour and its limits are in
+[`docs/ADAPTIVE.md`](docs/ADAPTIVE.md).
+
 ### Searching for a better strategy
 
 ```bash

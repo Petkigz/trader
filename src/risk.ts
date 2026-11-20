@@ -139,8 +139,22 @@ export interface SizingResult {
  * reality: Binance rejects anything under 5 USDT notional, so we round *down*
  * to the step and refuse to send an order we know will be refused.
  */
-export function sizePosition(cash: number, price: number, info: SymbolInfo, cfg: BotConfig): SizingResult {
-  const equitySlice = cash * cfg.risk.positionFraction;
+export function sizePosition(
+  cash: number,
+  price: number,
+  info: SymbolInfo,
+  cfg: BotConfig,
+  /**
+   * Fraction of cash to commit, overriding `cfg.risk.positionFraction`.
+   * Supplied by the adaptive layer; omitted means use the static setting.
+   */
+  fractionOverride?: number,
+): SizingResult {
+  const frac =
+    fractionOverride !== undefined && Number.isFinite(fractionOverride)
+      ? Math.min(Math.max(fractionOverride, 0), 1)
+      : cfg.risk.positionFraction;
+  const equitySlice = cash * frac;
   const notional = floorToStep(equitySlice, 0.01);
   const minNotional = Math.max(info.minNotional, 1);
 

@@ -29,6 +29,13 @@ long-running system lives, and it is handled.
 **Strategy parameters are never re-optimised on live data.** The shipped configuration
 (EMA200, ±0.5% hysteresis, 25% crash stop) is fixed. It is not allowed to change itself.
 
+One layer *does* adapt, and the boundary is deliberate: **position size adapts, rules do not.**
+[`ADAPTIVE.md`](ADAPTIVE.md) describes the volatility-targeting layer (`ADAPTIVE_SIZING=1`),
+which shrinks exposure when measured volatility rises. That is observable in advance and the
+mapping is fixed, so it can be tested and reasoned about. Re-optimising the entry and exit
+rules on live data cannot be, because the system would be scoring a change on the same data it
+fitted the change to.
+
 **No code is fetched and executed at runtime.** This is not caution for its own sake:
 
 - A system that rewrites its own trading logic has no way to know whether the change was an
@@ -129,5 +136,6 @@ costs nothing to host. A second venue becomes interesting when the account can a
 | Market data | **yes** | stale data is wrong data |
 | Risk state, position | **yes** | must reflect reality now |
 | Strategy parameters | **no** | self-optimising is self-deceiving |
+| Position size (vol targeting) | **yes** | `ADAPTIVE_SIZING=1`, see [`ADAPTIVE.md`](ADAPTIVE.md) |
 | Code / "latest formulas" | **no** | supply chain + guaranteed overfit |
 | Edge validation | **yes, offline** | `npm run research`, with a luck floor |
