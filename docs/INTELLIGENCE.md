@@ -111,6 +111,57 @@ The word does not describe a system that rewrites itself. In this repo it means 
 Judgement under constraint is intelligence. Adapting a formula until the numbers look good is
 how that judgement gets destroyed.
 
+## 4a. How much intelligence is actually possible
+
+The ceiling is not set by how sophisticated the model is. It is set by **how many learning
+opportunities exist**, and this strategy produces very few: 40 round trips in 8.7 years, or
+**4.6 decisions per year.**
+
+Minimum `R²` that could be *proved* at 95% confidence (F-test, `R² = F/(F + n − k − 1)`):
+
+| Observations | 1 predictor | 3 predictors |
+|---|---|---|
+| **40** (this strategy's trades) | **9.18%** | 6.74% |
+| 200 | 1.90% | 1.31% |
+| 3,400 (every daily bar) | 0.11% | 0.08% |
+| 40,000 (every 4h bar) | 0.01% | 0.01% |
+
+Honest predictors of daily returns explain **0.1%–1%** of variance. So with 40 events, a
+learned edge would need to be 10–100× stronger than anything real in order to be
+distinguishable from luck. **Any model fitted to 40 trades is unfalsifiable by construction** —
+which is exactly why it will look excellent in-sample and fail live.
+
+The obvious escape — use more bars — runs into the fee floor:
+
+| Frequency | Events in 8.7y | Fee drag/yr | Provable `R²` | Verdict |
+|---|---|---|---|---|
+| Daily trend (shipped) | 40 | 0.9% | 9.18% | fees fine, no statistical power |
+| Weekly | 452 | 10.4% | 0.85% | **the only workable frontier** |
+| Daily | 3,175 | 73.0% | 0.12% | fees dominate |
+| 4-hourly | 19,053 | 438.0% | 0.02% | impossible |
+
+**The sample size that intelligence needs sits at a frequency where the fees eat the account.**
+That is the whole constraint, and it is why the shipped system is deliberately simple: a simple
+rule with no fitted parameters can survive on 40 observations, while a clever rule with twelve
+of them cannot.
+
+Ranked by what can honestly be built:
+
+| Layer | Verifiable at $10? | Status |
+|---|---|---|
+| Risk and execution discipline | yes — mechanically | built |
+| Adaptive exposure (vol targeting) | yes — measurable | built, [`ADAPTIVE.md`](ADAPTIVE.md) |
+| Regime switching between strategy families | partly — few independent regimes | buildable |
+| Online ensemble weighting of sub-strategies | partly — allocation adapts without fitting a signal | buildable |
+| Learned signal model / meta-labelling | **no** — 40 events | would be unfalsifiable |
+| LLM-in-the-loop sentiment | **no** — not backtestable, unproven at daily horizon | possible, not advisable |
+| Self-rewriting strategy logic | **no** — see §2 | refused |
+
+The one route that could legitimately unlock a learned model is **pooling across many assets**
+(fifty pairs × three thousand days ≈ 150,000 observations) to learn general crypto dynamics,
+then applying the model to BTC. That is real statistics rather than numerology, and it is the
+only version of "learned intelligence" worth attempting in this repo.
+
 ## 5. Where the multi-venue idea actually stands
 
 The `Exchange` interface means a new venue is one adapter and nothing else in the engine
