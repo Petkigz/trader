@@ -178,7 +178,7 @@ async function main(): Promise<void> {
       console.log("registry is empty");
       return;
     }
-    console.log(`${"id".padEnd(18)} ${"status".padEnd(10)} ${"attempts".padStart(8)}  hypothesis`);
+    console.log(`${"id".padEnd(18)} ${"status".padEnd(10)} ${"tried".padStart(6)}  hypothesis`);
     for (const e of rows) {
       console.log(
         `${e.spec.id.padEnd(18)} ${e.status.padEnd(10)} ${String(registry.attempts).padStart(8)}  ` +
@@ -304,6 +304,15 @@ async function main(): Promise<void> {
       }
     }
 
+    // A promotion that was never asked to replicate is not a promotion. Without
+    // a second asset class the rule cannot distinguish an edge from a crypto
+    // artefact, so the safer reading is the default one: still in shadow.
+    if (verdict.promote && !replicateDir) {
+      verdict = { ...verdict, promote: false };
+      verdict.reasons.push("WITHHELD: no replication panel supplied (pass --replicate=<dir>)");
+      registry.withdraw(c.id, "no replication panel supplied");
+    }
+
     for (const r of verdict.reasons) console.log(`    · ${r}`);
     // Printed last so it reflects every gate, including a withdrawn promotion.
     console.log(`  ⇒ ${verdict.promote ? "PROMOTE" : "keep in shadow"}`);
@@ -312,6 +321,7 @@ async function main(): Promise<void> {
 
   await writeFile(REGISTRY, JSON.stringify(registry.toJSON(), null, 2) + "\n");
   console.log(`registry: ${registry.attempts} attempts recorded → ${REGISTRY}`);
+  console.log("note: `tried` is the registry total, because that is the bar's denominator;");
   console.log("note: assets are correlated, so round-trip counts overstate independence;");
   console.log("      the per-asset consistency gate is what compensates.");
   void mean;

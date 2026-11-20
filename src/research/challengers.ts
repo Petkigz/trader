@@ -117,7 +117,7 @@ export function evaluatePromotion(
 
   if (outcome.decisions < minDecisions) {
     reasons.push(
-      `insufficient sample: ${outcome.decisions} shadow decisions, floor is ${minDecisions}`,
+      `insufficient sample: ${outcome.decisions} held-out round trips, floor is ${minDecisions}`,
     );
     return { promote: false, reasons, required, observed };
   }

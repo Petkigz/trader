@@ -143,6 +143,20 @@ looked promotable. Stage 6 withdrew it, because the same change made things wors
 FX and commodity futures markets. That is precisely the failure this document was written to catch,
 caught by the code rather than by my judgement.
 
+### The champion is not exempt from the same numbers
+
+The `trend` champion the bot actually trades earned +404.5% per asset across the full 2020→now
+window (Sharpe 0.43, 548 round trips). Since 2024-01-01 it has averaged **−8.7%** with Sharpe 0.01
+over 211 round trips. That is the regime the challengers were being judged in, and it is why "keep
+the champion" is not a smug answer: on recent data the champion has no edge to defend. Nothing is
+promoted because nothing has *earned* promotion, not because the incumbent is good.
+
+### A promotion without replication is not a promotion
+
+`--replicate` is optional on the command line but not in the verdict: if no second panel is
+supplied, any would-be promotion is downgraded to shadow and the reason is written down. A rule
+that can be skipped by omitting a flag is not a rule.
+
 ### Two mistakes the build itself made
 
 Both were caught by the machinery refusing to behave, not by review:

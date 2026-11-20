@@ -9,10 +9,10 @@
       },
       "hypothesis": "Buying oversold RSI dips while above the long EMA beats waiting for a breakout, in the chop that follows crypto rallies.",
       "minDecisions": 100,
-      "registeredAt": 1795193725622
+      "registeredAt": 1795193755633
     },
     "status": "shadow",
-    "updatedAt": 1795193726001,
+    "updatedAt": 1795193755996,
     "outcome": {
       "decisions": 26,
       "returnPct": 0.0012356896551724318,
@@ -105,7 +105,7 @@
     "verdict": {
       "promote": false,
       "reasons": [
-        "insufficient sample: 26 shadow decisions, floor is 100",
+        "insufficient sample: 26 held-out round trips, floor is 100",
         "replication on 31 non-crypto instruments: edge -1.3%/yr, 19/31 improved → FAILS"
       ],
       "required": {
@@ -129,10 +129,10 @@
       },
       "hypothesis": "A faster 60-bar scoring window lets the ensemble rotate into mean reversion sooner than the default 120, improving returns in mixed regimes.",
       "minDecisions": 100,
-      "registeredAt": 1795193726898
+      "registeredAt": 1795193756821
     },
     "status": "shadow",
-    "updatedAt": 1795193727793,
+    "updatedAt": 1795193757657,
     "outcome": {
       "decisions": 171,
       "returnPct": 0.010859310344827587,
@@ -249,10 +249,10 @@
       },
       "hypothesis": "A 100-day trend filter reacts faster than 200 and captures crypto's shorter cycles, adding return without giving up much drawdown control.",
       "minDecisions": 100,
-      "registeredAt": 1795193729382
+      "registeredAt": 1795193759217
     },
     "status": "shadow",
-    "updatedAt": 1795193730235,
+    "updatedAt": 1795193760010,
     "outcome": {
       "decisions": 359,
       "returnPct": 0.01604827586206897,
