@@ -25,7 +25,8 @@
     "growth": "node --experimental-strip-types scripts/growth.ts",
     "context": "node --experimental-strip-types scripts/context.ts",
     "fetch:volume": "node --experimental-strip-types scripts/fetch-volume.ts",
-    "deploy:check": "node --experimental-strip-types scripts/deploy-check.ts"
+    "deploy:check": "node --experimental-strip-types scripts/deploy-check.ts",
+    "venues": "node --experimental-strip-types scripts/venues.ts"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",

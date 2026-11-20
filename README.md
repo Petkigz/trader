@@ -131,6 +131,12 @@ Renaissance Medallion, ~66%/year — is **0.14% per day**. Ten percent a day is 
 that**, sustained, by a $10 account on a public exchange. Nothing about venue, strategy or
 leverage changes the arithmetic; a system that could do it would not need to sell itself.
 
+MT5 is not implemented as a venue, and that is a measurement rather than an omission — see
+[`docs/ASSET.md`](docs/ASSET.md) §3, reproducible with `npm run venues`. At $10 the smallest
+order that exists (0.01 lots ≈ $1,160 notional) leaves an account 116× levered with an 89%
+chance of ruin within a year. It becomes sane at about **$276**, where one ordinary day costs
+2.6% of the account, matching the spot bot.
+
 What leverage *does* buy is bigger daily numbers. On a $10 MT5 account at the minimum
 0.01 lot, **40% of days gain more than $1** — against ~0% for this bot, whose daily swing is
 12 cents. That is a genuine advantage on that one metric, and it is exactly why the pitch is

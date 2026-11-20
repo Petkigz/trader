@@ -164,6 +164,12 @@ borrowing; MT5 at $10 will be, eventually, on a day that is not even unusual.
 
 ### What that does to the account, simulated
 
+> Reproducible: `npm run venues` (`scripts/venues.ts`, seed 20260101, 20,000 paths). The
+> original script behind these figures was never committed, so they are re-derived here —
+> 89.0% dead at $10 against the 87.8% previously quoted, same median of $0.00, stress case
+> 84.8% against 78% (the earlier stress run zeroed costs as well). Small differences are
+> model detail, not disagreement about the conclusion.
+
 20,000 paths, one year, same 56% market exposure for both systems. $10 start.
 MT5 is modelled with a fixed 0.01 lot ($1,160 notional, so P&L does not scale down as
 equity shrinks), $0.20 per round trip × 12/year, and declared dead once equity falls
@@ -198,6 +204,31 @@ single daily standard deviation**. The account does not need bad luck, just an o
 week. The time scale of the strategy and the time scale of the leverage are
 incompatible, and no amount of risk management fixes that — a stop-loss cannot act
 faster than a gap.
+
+### Where MT5 stops being a lottery ticket
+
+The rejection above is about $10, not about MT5. The same model, swept over account size
+(`npm run venues` again), says exactly where the constraint stops binding:
+
+| Equity | Leverage | 1σ day, as % of account | P(dead in 1yr) | Median | |
+|---|---|---|---|---|---|
+| $10 | 116× | 73.1% | **89.5%** | $0.00 | a quiet day ends it |
+| $50 | 23.2× | 14.6% | 55.6% | $0.00 | leverage decides |
+| $100 | 11.6× | 7.3% | 24.9% | $96.21 | leverage decides |
+| **$276** | **4.2×** | **2.6%** | **0.2%** | $275.47 | **risk per day matches the spot bot** |
+| $500 | 2.3× | 1.5% | 0.0% | $498.73 | calmer than spot |
+| $1,160 | 1.0× | 0.6% | 0.0% | $1,157.16 | unlevered |
+| $5,000 | 0.2× | 0.1% | 0.0% | $5,000.04 | |
+
+**$276 is the threshold.** Not because the strategy improves — it does not — but because at
+that equity one ordinary EURUSD day costs 2.6% of the account, the same as the spot bot, and
+the margin floor is no longer reachable by weather. Below $100 you are not trading an edge,
+you are holding a levered bet with a 25–90% chance of ruin. Above ~$1,160 the position is
+unlevered and MT5 is simply a calmer venue for the same trend rule.
+
+So the path to a second venue is the same path as everything else in this repo: **grow the
+account first**. At $276 the same 0.01 lot that destroys a $10 account becomes the correctly
+sized position. Nothing else needs to change.
 
 ### If the goal is "10× your money in a month" instead
 
