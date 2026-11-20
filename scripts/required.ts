@@ -88,6 +88,27 @@ function main(): void {
     console.log(`  ${(rate * 100).toFixed(1)}%/yr -> ${money(need)} of capital (${(need / capital).toFixed(0)}x what you have)`);
   }
 
+  // Where, exactly, does the line sit? Everything above the best sustained
+  // record in finance is not a strategy question.
+  const bestFundDaily = (Math.pow(1.66, 1 / TRADING_DAYS) - 1) * 100;
+  console.log("\nThe boundary — daily rates, and what each yields on this capital:");
+  console.log("per day    per year (simple)   yields/day on capital   vs best fund ever   status");
+  for (const ratePct of [10, 5, 2, 1, 0.2, 0.04]) {
+    const ratio = ratePct / bestFundDaily;
+    const status =
+      ratio > 10
+        ? "never sustained by anything"
+        : ratio > 1.2
+          ? "beyond every long-run record"
+          : ratio > 0.8
+            ? "the best fund in history"
+            : "what this bot has measured";
+    console.log(
+      `${`${ratePct}%`.padStart(7)}   ${pct(ratePct * TRADING_DAYS).padStart(16)}   ${money((capital * ratePct) / 100).padStart(21)}   ` +
+        `${`${ratio.toFixed(1)}x`.padStart(17)}   ${status}`,
+    );
+  }
+
   console.log(
     `\nThe honest conclusion. ${money(perDay)} a day from ${money(capital)} is ${pct(dailyPct)} every day, and\n` +
       `no strategy, this one or any other, has ever produced that: the best long-run record in\n` +

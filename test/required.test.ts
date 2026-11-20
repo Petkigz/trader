@@ -28,3 +28,25 @@ test("the comparison against real track records is included", () => {
   assert.match(out, /Buffett.*0\.07%\/day.*139x larger/);
   assert.match(out, /Medallion.*0\.20%\/day.*50x larger/);
 });
+
+test("the boundary is a line, not a preference — everything above it is unrecorded", () => {
+  const out = required(["--capital=10", "--per-day=0.5"]);
+  const rows = [...out.matchAll(/^\s+([\d.]+)%\s+[\d,]+\%\s+\$[\d.]+\s+([\d.]+)x\s+(.+)$/gm)].map((m) => ({
+    perDay: Number(m[1]),
+    ratio: Number(m[2]),
+    status: m[3].trim(),
+  }));
+  assert.ok(rows.length >= 5, `expected the ladder, parsed ${rows.length} rows`);
+  for (const row of rows.filter((r) => r.ratio > 1.2)) {
+    assert.match(row.status, /never sustained|beyond every long-run record/);
+  }
+  // 5%/day is 25x the best fund in existence, and the script must say so.
+  const five = rows.find((r) => r.perDay === 5);
+  assert.ok(five && five.ratio > 24 && five.ratio < 26, `got ${five?.ratio}`);
+});
+
+test("halving the rate does not move what the income costs", () => {
+  const out = required(["--capital=10", "--per-day=0.5"]);
+  // $0.50/day = $182.50/yr; at 9.9% that is ~$1,843 of capital, not $10.
+  assert.match(out, /9\.9%\/yr -> \$1,843 of capital \(184x what you have\)/);
+});

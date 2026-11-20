@@ -131,6 +131,19 @@ $1/day from $10 is **10% per day, every day** — 2,520%/yr simple, 1.1× the ac
 
 Against real records: Buffett 0.07%/day, the best long-run hedge fund ~0.20%/day, this bot 0.04%/day. Even the best calendar year Bitcoin ever had (2013, +5,500%) is 1.61%/day, and the best single year of any asset in `data/real` (DOGE, +21,036%) is 2.15%/day — and neither repeated.
 
+Halving it to 5%/day changes the percentage and nothing else: 1,260%/yr, **$2.2 million from $10 in one year**, the world economy in 615 trading days, and still **25× the best long-run fund in history**.
+
+Where the boundary actually sits, as a daily rate:
+
+| Per day | Per year | vs the best fund ever | Status |
+|---|---|---|---|
+| 10% | 2,520% | 50× | never sustained by anything |
+| 5% | 1,260% | 25× | never sustained by anything |
+| 2% | 504% | 10× | beyond every long-run record |
+| 1% | 252% | 5× | beyond every long-run record |
+| **0.2%** | ~66% | **1×** | the best fund in history |
+| 0.04% | 9.9% | 0.2× | what this bot has measured |
+
 A target that no fund, no market and no asset has sustained is not a strategy gap. **No capital and no code produces it**, which is why every figure in this repo is quoted in years.
 
 ### What a given capital makes
