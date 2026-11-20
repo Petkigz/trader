@@ -219,6 +219,13 @@ there is nothing to multiply but variance. BTC, for all its faults, carries a me
 positive drift (+23.3%/yr), which is why the *less* leveraged venue wins on the number that
 matters. A driftless asset plus leverage is a coin flip with fees attached.
 
+**MT4 changes none of this.** It is the same instrument (EURUSD), the same ~zero drift and
+the same 0.01-lot floor, so the odds are the same ~2.5% — the platform version was never the
+variable. If anything MT4 is now the weaker choice: MetaQuotes has been retiring it, several
+brokers no longer create **new** cent accounts on MT4 at all (a cent account is the one
+feature that genuinely helps a small balance, by removing the forced 116× leverage), and some
+remaining MT4 cent accounts set a **0.1-lot** minimum — ten times coarser than MT5's 0.01.
+
 Both rows are still ~90% total loss, so this is a comparison of two bad bets, not a
 recommendation of the better one. What the table does establish is that the platform choice
 does not rescue the plan: no venue turns $10 into $300 a month reliably, and the one with the
