@@ -88,6 +88,36 @@ Put per-day, the number is the one worth internalising before you deploy:
 
 This is also why the bot can be genuinely unattended: there is nothing to react to on a day-to-day basis. If you find yourself checking it daily, you will be watching nothing happen, and that is the design working as intended.
 
+### What capital would actually pay $10 a day
+
+$10/day is $3,650/year. Divides out to:
+
+| Assumed annual return | Capital required |
+|---|---|
+| **23.3%** (the measured backtest) | **$15,665** |
+| 15% (edge weaker than history) | $24,333 |
+| 10% | $36,500 |
+| 5% | $73,000 |
+
+The 23.3% row is the optimistic one — it assumes eight years of one asset's history repeat. Size from the 10–15% rows instead and treat 23.3% as the ceiling.
+
+**There is no capital level at which this pays $10 every day.** At $15,665 what you actually get, over one year:
+
+| Outcome | One year | Per day |
+|---|---|---|
+| 5th percentile (bad year) | **−$2,561** | −$7.02 |
+| 25th percentile | +$821 | +$2.25 |
+| Median | +$3,663 | +$10.04 |
+| 75th percentile | +$6,966 | +$19.08 |
+| 95th percentile (good year) | +$12,793 | +$35.05 |
+
+Two things follow, and both are awkward:
+
+- **You lose money in ~19% of years, regardless of capital.** More capital does not make a losing year less likely — it makes it bigger.
+- At $15,665 the yearly standard deviation (≈$3,681) is **as large as the expected gain** (≈$3,650), so it takes about **4 years** before the result is statistically distinguishable from luck. Anyone reporting a 12-month track record on this strategy is reporting noise.
+
+So the honest framing: $15,665 of this strategy is roughly a $3,650/year income with a ±$3,700 annual swing, delivered in a handful of lumps, with a one-in-five chance of a negative year. That is an investment, not a salary — do not build a budget on it.
+
 ### What would actually break it
 
 - The exchange delisting the pair, or exiting your country
