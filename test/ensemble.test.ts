@@ -106,17 +106,15 @@ test("mean reversion tolerates being asked for a decision while holding", () => 
   assert.ok(d.reason.length > 0);
 });
 
-test("family scores are finite and selection weights sum to one", () => {
+test("selection is the argmax of the scores, and edge carries the sign", () => {
   const cfg = ENSEMBLE_CFG();
-  const daily = candles(rising(400, 0.2));
-  const scores = scoreFamilies(daily, cfg);
-  assert.ok(Number.isFinite(scores.trend));
-  assert.ok(Number.isFinite(scores.meanrev));
-
-  const state = selectFamily(daily, cfg);
-  const total = state.weights.trend + state.weights.meanrev;
-  assert.ok(Math.abs(total - 1) < 1e-9, `weights must sum to 1, got ${total}`);
-  assert.ok(["trend", "meanrev", "cash"].includes(state.selected));
+  const state = selectFamily(candles(rising(600)), cfg);
+  assert.ok(Number.isFinite(state.scores.trend) && Number.isFinite(state.scores.meanrev));
+  assert.ok(Math.abs(state.edge - (state.scores.meanrev - state.scores.trend)) < 1e-12);
+  // No softmax, no temperature: the winner is decided by the sign of the edge,
+  // so a knob that merely rescales confidence cannot exist to mislead anyone.
+  const expected = state.edge > 0 ? "meanrev" : "trend";
+  assert.ok(state.selected === "cash" || state.selected === expected);
 });
 
 test("a storm forces cash regardless of family scores", () => {

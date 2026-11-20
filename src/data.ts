@@ -139,6 +139,43 @@ export async function fetchHistory(md: MarketData, opts: HistoryOptions): Promis
     .sort((a, b) => a.openTime - b.openTime);
 }
 
+/**
+ * Parse candle CSV rows — `time,open,high,low,close[,volume]`.
+ *
+ * `time` may be epoch seconds, epoch milliseconds, or an ISO date/timestamp
+ * (`2026-11-14`). Unparseable rows are skipped, which is what makes a header
+ * line harmless and what lets `data/btc_1d.csv` stay human-readable.
+ */
+export function parseCandleCsv(text: string): Candle[] {
+  const out: Candle[] = [];
+  for (const row of text.trim().split(/\r?\n/)) {
+    const parts = row.split(",");
+    if (parts.length < 5) continue;
+    const raw = parts[0].trim();
+    const asNumber = Number(raw);
+    let openTime = Number.NaN;
+    if (raw !== "" && Number.isFinite(asNumber)) {
+      openTime = asNumber > 1e12 ? asNumber : asNumber * 1000;
+    } else {
+      const parsed = Date.parse(raw);
+      if (Number.isFinite(parsed)) openTime = parsed;
+    }
+    if (!Number.isFinite(openTime)) continue;
+    const ohlc = parts.slice(1, 5).map((v) => Number(v));
+    if (ohlc.some((v) => !Number.isFinite(v))) continue;
+    out.push({
+      openTime,
+      open: ohlc[0],
+      high: ohlc[1],
+      low: ohlc[2],
+      close: ohlc[3],
+      volume: Number(parts[5] ?? 0) || 0,
+      closeTime: openTime + intervalMs("1d") - 1,
+    });
+  }
+  return out.sort((a, b) => a.openTime - b.openTime);
+}
+
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {

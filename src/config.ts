@@ -74,8 +74,6 @@ export interface AdaptiveParams {
 export interface EnsembleParams {
   /** Trailing bars of virtual history used to rank the families. */
   scoreWindow: number;
-  /** Softmax temperature; lower = more decisive switching. */
-  temperature: number;
   /** RSI period for the mean-reversion family. */
   rsiPeriod: number;
   /** RSI at or below which a dip is bought. */
@@ -209,7 +207,6 @@ export function loadConfig(env: Env = process.env): BotConfig {
 
     ensemble: {
       scoreWindow: num(env, "ENSEMBLE_SCORE_WINDOW", 120),
-      temperature: num(env, "ENSEMBLE_TEMPERATURE", 5),
       rsiPeriod: num(env, "ENSEMBLE_RSI_PERIOD", 14),
       rsiEntry: num(env, "ENSEMBLE_RSI_ENTRY", 35),
       rsiExit: num(env, "ENSEMBLE_RSI_EXIT", 55),
@@ -283,7 +280,6 @@ export function validate(cfg: BotConfig): void {
   if (cfg.trend.emaPeriod < 20) throw new Error("trend.emaPeriod must be >= 20");
   if (cfg.pullback.rsiPeriod < 2) throw new Error("pullback.rsiPeriod must be >= 2");
   if (!(cfg.ensemble.scoreWindow >= 10)) throw new Error("ensemble.scoreWindow must be >= 10");
-  if (!(cfg.ensemble.temperature > 0)) throw new Error("ensemble.temperature must be > 0");
   if (!(cfg.ensemble.rsiEntry > 0 && cfg.ensemble.rsiEntry < cfg.ensemble.rsiExit)) {
     throw new Error("ensemble.rsiEntry must be below ensemble.rsiExit");
   }

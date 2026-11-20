@@ -168,7 +168,8 @@ borrowing; MT5 at $10 will be, eventually, on a day that is not even unusual.
 MT5 is modelled with a fixed 0.01 lot ($1,160 notional, so P&L does not scale down as
 equity shrinks), $0.20 per round trip × 12/year, and declared dead once equity falls
 below the $2.32 needed to open another 0.01 lot. FX drift set to zero, i.e. generously.
-Crypto uses the measured +23.3% CAGR and 42% volatility.
+Crypto uses the measured +23.3% CAGR and 42% volatility (the earlier, more conservative
+measurement — the re-measurement on authentic candles gave 30.0%, see `docs/BACKTEST.md`).
 
 | | Crypto spot bot | MT5 at $10 |
 |---|---|---|

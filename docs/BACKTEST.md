@@ -14,6 +14,31 @@ npm run backtest -- --strategy=pullback --years=2
 
 It writes `backtest-report.json` with the full equity curve and monthly table.
 
+## Revision: 20 Nov 2026
+
+The headline numbers in this document were re-measured on `data/btc_1d.csv` — 3,240 daily
+candles rebuilt from Binance 1-minute klines — after the original pull was found to come from
+an endpoint whose prices disagreed with the exchange's own ticker.
+
+| | Original pull | Authentic candles |
+|---|---|---|
+| Window | 2018-03-05 → 2026-11-20 (8.71y) | 2018-01-01 → 2026-11-14 (8.31y) |
+| Final equity | $62.12 (+521%) | **$88.41 (+784%)** |
+| CAGR | 23.3% | **30.0%** |
+| Max drawdown | −57.1% | −61.0% |
+| Round trips | 40 | 33 |
+| Buy & hold | +443% | +767% |
+
+Two things moved in opposite directions: the absolute result improved, and the **edge over
+buy-and-hold nearly vanished** (+521% vs +443% became +784% vs +767%). The conclusion in
+"what this proves" therefore rests on drawdown and exposure, not on outperformance. The older
+figures are left in the tables below as the historical record, marked where they appear; the
+sweeps in those tables were directionally consistent at both data sources.
+
+`docs/ASSET.md` and the capital table in the README keep using the more conservative 23.3%
+CAGR for planning on purpose — a re-measurement that moves in the favourable direction should
+not be allowed to raise a promise.
+
 ## What was measured
 
 | | |

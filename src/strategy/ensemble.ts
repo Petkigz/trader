@@ -43,7 +43,8 @@ export interface EnsembleState {
   /** Virtual trailing return per family, in percent. Rank-only — excludes costs. */
   scores: { trend: number; meanrev: number };
   /** Softmax allocation weight per family, summing to 1. */
-  weights: { trend: number; meanrev: number };
+  /** score(meanrev) - score(trend); positive means the challenger leads. */
+  edge: number;
   selected: Family;
   note: string;
 }
@@ -108,21 +109,16 @@ export function scoreFamilies(
   return { trend, meanrev };
 }
 
-function softmax(a: number, b: number, temperature: number): { trend: number; meanrev: number } {
-  const t = Math.max(temperature, 1e-6);
-  const m = Math.max(a, b);
-  const ea = Math.exp((a - m) / t);
-  const eb = Math.exp((b - m) / t);
-  const total = ea + eb;
-  return { trend: ea / total, meanrev: eb / total };
-}
-
 export function selectFamily(daily: readonly Candle[], cfg: BotConfig): EnsembleState {
   const regime = classifyRegime(daily, cfg);
   const scores = scoreFamilies(daily, cfg);
-  const weights = softmax(scores.trend, scores.meanrev, cfg.ensemble.temperature);
-
-  let selected: Family = weights.trend >= weights.meanrev ? "trend" : "meanrev";
+  // Selection is the sign of the score edge. There is deliberately no
+  // temperature here: a softmax over two scores is order-preserving, so any
+  // "temperature" can only relabel the confidences, never change the winner.
+  // A knob that cannot change behaviour is a lie, so it was removed.
+  const edge = scores.meanrev - scores.trend;
+  const manager: Family = edge > 0 ? "meanrev" : "trend";
+  let selected: Family = manager;
 
   // Hard override: a volatility storm takes precedence over any score. The
   // scores are trailing, so in a storm they describe a market that has already
@@ -134,11 +130,11 @@ export function selectFamily(daily: readonly Candle[], cfg: BotConfig): Ensemble
   return {
     regime,
     scores,
-    weights,
+    edge,
     selected,
     note:
-      `${regime.note} · weights trend ${(weights.trend * 100).toFixed(0)}% / ` +
-      `meanrev ${(weights.meanrev * 100).toFixed(0)}% → ${selected}`,
+      `${regime.note} · score trend ${(scores.trend * 100).toFixed(1)}% / ` +
+      `meanrev ${(scores.meanrev * 100).toFixed(1)}% → ${selected}`,
   };
 }
 
@@ -148,10 +144,9 @@ function metaOf(state: EnsembleState): Record<string, number | string | boolean>
     regimeVol: state.regime.vol,
     regimeTrend: state.regime.trend,
     regimeStrength: Math.round(state.regime.strength * 1000) / 1000,
-    scoreTrend: Math.round(state.scores.trend * 100) / 100,
-    scoreMeanRev: Math.round(state.scores.meanrev * 100) / 100,
-    weightTrend: Math.round(state.weights.trend * 100) / 100,
-    weightMeanRev: Math.round(state.weights.meanrev * 100) / 100,
+    scoreTrend: Math.round(state.scores.trend * 1000) / 1000,
+    scoreMeanRev: Math.round(state.scores.meanrev * 1000) / 1000,
+    edge: Math.round(state.edge * 1000) / 1000,
     selected: state.selected,
   };
 }
@@ -165,7 +160,7 @@ export function evalEnsemble(input: StrategyInput): Decision {
     // selected kept closing trades the other one had opened, and the selected    // one re-opened them on the next bar. The manager is whoever the scores
     // currently favour; the storm override does not force an exit, because a
     // chooser must never trap a position.
-    const manager: Family = state.weights.trend >= state.weights.meanrev ? "trend" : "meanrev";
+    const manager: Family = state.edge > 0 ? "meanrev" : "trend";
     const decision = manager === "trend" ? evalTrendExit(input) : evalMeanRev(input);
     return {
       ...decision,

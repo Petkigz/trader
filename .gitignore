@@ -6,4 +6,5 @@ node_modules/
 *.log
 backtest-report.json
 data/*.csv
+!data/btc_1d.csv
 .DS_Store

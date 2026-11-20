@@ -14,7 +14,7 @@
 import { writeFile } from "node:fs/promises";
 import { loadConfig } from "../config.ts";
 import { defaultSymbolInfo, runBacktest, type BacktestResult } from "../backtest.ts";
-import { fetchHistory, intervalMs, syntheticCandles } from "../data.ts";
+import { fetchHistory, intervalMs, parseCandleCsv, syntheticCandles } from "../data.ts";
 import { BinanceHttp, BinanceMarketData } from "../exchange/binance.ts";
 import type { Candle, StrategyName } from "../types.ts";
 import { DAY_MS } from "../util/num.ts";
@@ -56,26 +56,7 @@ function parseFlags(argv: string[]): Flags {
 
 async function loadCsv(path: string): Promise<Candle[]> {
   const { readFile } = await import("node:fs/promises");
-  const text = await readFile(path, "utf8");
-  const rows = text.trim().split(/\r?\n/);
-  const out: Candle[] = [];
-  for (const row of rows) {
-    const parts = row.split(",");
-    if (parts.length < 5) continue;
-    const ts = Number(parts[0]);
-    if (!Number.isFinite(ts)) continue;
-    const openTime = ts > 1e12 ? ts : ts * 1000;
-    out.push({
-      openTime,
-      open: Number(parts[1]),
-      high: Number(parts[2]),
-      low: Number(parts[3]),
-      close: Number(parts[4]),
-      volume: Number(parts[5] ?? 0),
-      closeTime: openTime + intervalMs("1d") - 1,
-    });
-  }
-  return out.sort((a, b) => a.openTime - b.openTime);
+  return parseCandleCsv(await readFile(path, "utf8"));
 }
 
 async function main(): Promise<void> {

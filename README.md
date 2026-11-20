@@ -5,7 +5,7 @@ A crypto trading bot built for one specific, awkward brief: **run on $10, look a
 Long-only spot. One position at a time. No leverage, no margin, no liquidation, no API keys required to start. Zero runtime dependencies, zero build step, runs on a serverless cron and a free Postgres.
 
 ```
-$10  ──►  daily trend filter  ──►  buy / hold / sell  ──►  $62.12   (real BTC, 2017-2026)
+$10  ──►  daily trend filter  ──►  buy / hold / sell  ──►  $88.41   (real BTC, 2018-2026)
 ```
 
 ---
@@ -47,18 +47,20 @@ Flat while BTC fell 41%. Whether that reads as success depends entirely on what 
 
 ### Measured on real BTC history
 
-Run on 3,383 real daily BTCUSDT candles (trading window 2018-03-05 → 2026-11-20, 8.71 years, after the 200-day warm-up), starting with $10:
+Run on 3,240 real daily BTCUSDT candles (2018-01-01 → 2026-11-14, 8.31 years), starting with $10. The candles in `data/btc_1d.csv` are rebuilt from Binance's own **1-minute** klines, so this run is reproducible offline and verifiable against public reference prices:
 
 | | This bot | Buy & hold |
 |---|---|---|
-| Ended with | **$62.12** | $54.34 |
-| Total return | **+521%** | +443% |
-| CAGR | **+23.3%** | +21.5% |
-| Max drawdown | **−57%** | −83% |
-| Time in the market | 56% | 100% |
-| Round trips | 40 | — |
-| Win rate | 25% | — |
-| Fees paid | $2.21 | — |
+| Ended with | **$88.41** | $86.75 |
+| Total return | **+784%** | +767% |
+| CAGR | **+30.0%** | +29.4% |
+| Max drawdown | **−61%** | −77% |
+| Time in the market | 57% | 100% |
+| Round trips | 33 | — |
+| Win rate | 30% | — |
+| Fees paid | $3.30 | — |
+
+> **Revision, 20 Nov 2026.** An earlier version of this table reported $62.12 / +521% / −57% from a different candle pull. That pull came from an endpoint that returned prices inconsistent with the exchange's own ticker (`bookTicker` said 61,783 while the klines said 77k→61.8k). The figures above are measured on authentic minute-aggregated data. The headline went **up**, and the claim went **down**: the bot now barely beats buy-and-hold on return (+784% vs +767% instead of +521% vs +443%), and the real result is the drawdown — 61% instead of 77% while being in the market 57% of the time. That is the only thing here that survived a change of data source.
 
 Read that win rate again: **it wins 1 trade in 4**. Trend following is supposed to look like that — a few large winners pay for many small losses. If a 25% win rate would make you turn the bot off during a losing streak, do not run it.
 
@@ -94,12 +96,12 @@ $10/day is $3,650/year. Divides out to:
 
 | Assumed annual return | Capital required |
 |---|---|
-| **23.3%** (the measured backtest) | **$15,665** |
+| **30.0%** (the re-measured backtest) | **$12,180** |
+| 23.3% (the earlier, lower measurement) | $15,665 |
 | 15% (edge weaker than history) | $24,333 |
 | 10% | $36,500 |
-| 5% | $73,000 |
 
-The 23.3% row is the optimistic one — it assumes eight years of one asset's history repeat. Size from the 10–15% rows instead and treat 23.3% as the ceiling.
+The top row is the optimistic one — it assumes eight years of one asset's history repeat, in the best eight years crypto has had. Size from the 10–15% rows instead and treat 30% as the ceiling.
 
 **There is no capital level at which this pays $10 every day.** At $15,665 what you actually get, over one year:
 
@@ -478,15 +480,19 @@ See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter s
 ### The ensemble: regime switching
 
 ```bash
-STRATEGY=ensemble npm run backtest -- --years=8
+STRATEGY=ensemble npm run backtest -- --csv=data/btc_1d.csv
 ```
 
 Classifies the market's volatility and directionality, then lets a trend follower and a
 mean-reversion family compete for control, with cash forced during a volatility storm. The trade
 is owned by one family at a time — letting both families vote on exits turned it into a 193-trade
-churn that lost 42% to fees. Full measurements, including where it loses to plain trend, are in
-[`docs/ENSEMBLE.md`](docs/ENSEMBLE.md). Off by default: on synthetic data it cuts drawdown but
-gives up upside in long bull runs.
+churn that lost 42% to fees.
+
+**It did not survive real data.** Across six spans of authentic candles it lowers drawdown in
+6 of 6 and improves Sharpe in 4 of 6, but the mean Sharpe gain is +0.02 with **t ≈ 0.7** —
+indistinguishable from luck — and the best window on synthetic data turned out to be nearly the
+worst on real data. Off by default, and it should stay that way. The measurements, the sweep and
+the reasoning are in [`docs/ENSEMBLE.md`](docs/ENSEMBLE.md).
 
 ### Adaptive sizing
 
