@@ -120,6 +120,26 @@ Read as a *rate*, the target at small capital is not demanding, it is arithmetic
 | $3,636 | 99%/yr | 1.7× — needs its best year, every year |
 | $12,180 | 30%/yr | within the measured range |
 
+### How far it can be pushed
+
+```bash
+npm run ceiling
+```
+
+Kelly says the most leverage this edge could ever justify is **1.32×** (drift ÷ variance = 23.3% ÷ 0.42²). There is no leverage path in the code today — spot only, position fraction below 1 — so the reachable maximum is the unlevered edge itself:
+
+| Leverage | Median year | P(margin call) |
+|---|---|---|
+| 1.0× | +16% | 0.0% |
+| **1.3×** (Kelly) | +21% | 0.1% |
+| 3× | +53% | 11.5% |
+| 5× | +68% | 31.1% |
+| 10× | **−100%** | 57.4% |
+
+Past ~5× the *median* path is a wiped account even though the mean looks spectacular — leverage fattens the right tail faster than it lifts the typical outcome. A 10× account that survives makes a fortune; more than half of them do not survive.
+
+So "pushing it to the maximum" means **~31%/yr at Kelly-optimal leverage, not 3,650%**. The requirement of 36.5×/yr has precedent in **0.32%** of 55,358 rolling asset-years — essentially one bull run, in 2020-21, on assets you would have had to pick in advance.
+
 The largest single month any of the 20 assets has ever had is **+1,074%** (DOGE), which is why the target *feels* reachable — as a one-off event it is not impossible. As a rate sustained every month it is 3,600% a year, and the best the strategy has ever done across 20 assets is 59.8%.
 
 **There is no capital level at which this pays $10 every day.** At $15,665 what you actually get, over one year:

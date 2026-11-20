@@ -28,7 +28,8 @@
     "deploy:check": "node --experimental-strip-types scripts/deploy-check.ts",
     "venues": "node --experimental-strip-types scripts/venues.ts",
     "fx:edge": "node --experimental-strip-types scripts/fx-edge.ts",
-    "target": "node --experimental-strip-types scripts/target.ts"
+    "target": "node --experimental-strip-types scripts/target.ts",
+    "ceiling": "node --experimental-strip-types scripts/ceiling.ts"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",
