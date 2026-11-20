@@ -109,7 +109,8 @@ is what makes the second tick of a day a no-op rather than churn.
 ## How to re-run this audit
 
 ```bash
-npx tsc --noEmit && npm test          # 197 tests
+npx tsc --noEmit && npm test          # 210 tests
+npm run deploy:check                  # deploy pre-flight: crons, bundles, config, schema
 npm run research                      # headline grid, unchanged
 npm run challenger -- --dir=data/real --replicate=data/realclass
 npm run catchup -- --dir=data/real    # the sizing experiment

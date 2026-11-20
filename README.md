@@ -318,6 +318,23 @@ The bot needs nothing else — candles come from the exchange API at tick time, 
 | `SYMBOL` | `BTCUSDT` |
 | `STRATEGY` | `trend` |
 
+**2a. Pre-flight.** Run this before the first deploy, and after any change to
+`vercel.json`, `api/`, or the migration:
+
+```bash
+npm run deploy:check
+```
+
+It verifies, offline: every cron path has a handler and no schedule is sub-daily (Hobby rejects
+those at deploy time); every relative import in `api/` and `src/` resolves; each handler **bundles**
+with esbuild and `/api/health` actually executes; the config loads with an empty environment, refuses
+live without keys, and warns if live has no `CRON_SECRET`; `.env.example` still documents every
+setting; and the migration contains the tables, lock function, RLS and seed row. `FAIL` exits
+non-zero. It prints `deployable: 0 failure(s), 3 warning(s)` when the repo is sound.
+
+What it cannot check, and does not pretend to: that the migration has been applied to *your* project,
+that the exchange is reachable from your deployment, and that a cron actually fired.
+
 **3. Done.** `vercel.json` registers two cron entries for `/api/tick`, at 00:20 and 06:20 UTC. Visit `/` for the dashboard, `/api/health` for a monitor-friendly liveness check.
 
 Three Vercel behaviours that matter here, all verified for 2026:

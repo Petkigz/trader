@@ -16,7 +16,7 @@
     "lock": "node --env-file-if-exists=.env src/cli/halt.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts",
-    "verify": "npm run typecheck && npm test",
+    "verify": "npm run typecheck && npm test && npm run deploy:check",
     "xsection": "node --experimental-strip-types scripts/xsection.ts",
     "xsmom": "node --experimental-strip-types scripts/xsmom.ts",
     "challenger": "node --experimental-strip-types scripts/challenger.ts",
@@ -24,11 +24,12 @@
     "recover": "node --experimental-strip-types scripts/recover.ts",
     "growth": "node --experimental-strip-types scripts/growth.ts",
     "context": "node --experimental-strip-types scripts/context.ts",
-    "fetch:volume": "node --experimental-strip-types scripts/fetch-volume.ts"
+    "fetch:volume": "node --experimental-strip-types scripts/fetch-volume.ts",
+    "deploy:check": "node --experimental-strip-types scripts/deploy-check.ts"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.6.0",
-    "@types/node": "^22.7.0"
+    "@types/node": "^22.7.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.6.0"
   }
 }

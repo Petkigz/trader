@@ -44,3 +44,18 @@ test("the expensive backtest endpoint is closed by default", async () => {
   const res = authorize({ headers: {} }, "", { allowWhenUnset: cfg.publicBacktest });
   assert.equal(res.ok, false);
 });
+
+test("every api handler has a matching, resolvable entry point", async () => {
+  const { readdirSync, existsSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const handlers = readdirSync("api").filter((f) => f.endsWith(".ts"));
+  assert.ok(handlers.length >= 4, `expected the four handlers, found ${handlers.length}`);
+  for (const file of handlers) {
+    const src = readFileSync(join("api", file), "utf8");
+    assert.match(src, /export default/, `${file} must default-export a handler`);
+  }
+  // The two the scheduler and the dashboard cannot work without.
+  for (const required of ["tick.ts", "status.ts", "health.ts"]) {
+    assert.ok(existsSync(join("api", required)), `api/${required} is missing`);
+  }
+});
