@@ -21,6 +21,17 @@ export function mean(xs: readonly number[]): number {
   return s / xs.length;
 }
 
+/**
+ * Median. Used for cross-sectional summaries because one 8,000% outlier coin
+ * should not be allowed to describe what twenty of them did.
+ */
+export function median(xs: readonly number[]): number {
+  if (xs.length === 0) return Number.NaN;
+  const s = [...xs].sort((a, b) => a - b);
+  const mid = s.length >> 1;
+  return s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+}
+
 /** Sample standard deviation (n − 1). */
 export function sd(xs: readonly number[]): number {
   if (xs.length < 2) return Number.NaN;

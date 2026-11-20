@@ -5,6 +5,7 @@
  */
 
 import type { BotConfig } from "./config.ts";
+import { goalStatus, type Pressure } from "./goal.ts";
 import { summariseTrades, type LedgerSummary } from "./ledger.ts";
 import type { Store } from "./store/types.ts";
 import type { BotState, TickRecord, TradeRecord } from "./types.ts";
@@ -54,11 +55,58 @@ export interface StatusSnapshot {
     consecutiveLosses: number;
     killSwitch: boolean;
   };
+  /** Where the account is against the stated goal, and what it permits. */
+  goal: {
+    dailyTarget: number;
+    daysElapsed: number;
+    targetEquity: number;
+    deficit: number;
+    surplus: number;
+    lastDayPnl: number | null;
+    achievedPerDay: number;
+    pressure: Pressure;
+    verdict: string;
+    /** Always false: the goal line is reported, it never blocks a trade. */
+    entriesBlockedByGoal: false;
+  };
   performance: LedgerSummary;
   curve: Array<{ ts: number; equity: number }>;
   recentTrades: TradeRecord[];
   recentTicks: TickRecord[];
   note?: string;
+}
+
+/**
+ * The goal anchor is the first thing we know about this account: the earliest
+ * equity point, else the earliest trade, else now. It is derived rather than
+ * stored so that a fresh deployment does not invent a deficit it never had.
+ */
+function buildGoal(
+  cfg: BotConfig,
+  equity: number,
+  state: { dayStartEquity?: number } | null,
+  curve: Array<{ ts: number; equity: number }>,
+  now: number,
+): StatusSnapshot["goal"] {
+  const startDate = curve.length > 0 ? curve[0].ts : now;
+  const status = goalStatus(
+    { startEquity: cfg.initialPaperUsdt, startDate, dailyTarget: cfg.goalDailyTarget },
+    equity,
+    now,
+  );
+  const dayStart = state?.dayStartEquity ?? 0;
+  return {
+    dailyTarget: cfg.goalDailyTarget,
+    daysElapsed: status.daysElapsed,
+    targetEquity: round(status.targetEquity, 2),
+    deficit: round(status.deficit, 2),
+    surplus: round(status.surplus, 2),
+    lastDayPnl: dayStart > 0 ? round(equity - dayStart, 4) : null,
+    achievedPerDay: round(status.achievedPerDay, 4),
+    pressure: status.pressure,
+    verdict: status.verdict,
+    entriesBlockedByGoal: false,
+  };
 }
 
 export async function buildStatus(cfg: BotConfig, store: Store, now = Date.now()): Promise<StatusSnapshot> {
@@ -133,6 +181,7 @@ export async function buildStatus(cfg: BotConfig, store: Store, now = Date.now()
       consecutiveLosses: state?.consecutiveLosses ?? 0,
       killSwitch: Boolean(state?.killSwitch || cfg.killSwitch),
     },
+    goal: buildGoal(cfg, equity, state, curve, now),
     performance: summariseTrades(trades),
     curve: curve.map((p) => ({ ts: p.ts, equity: round(p.equity, 4) })),
     recentTrades: trades.slice(0, 25),

@@ -126,6 +126,11 @@ export interface BotConfig {
 
   killSwitch: boolean;
   initialPaperUsdt: number;
+  /**
+   * The stated goal, USDT per day. Reported against, never traded toward:
+   * see src/goal.ts for why the ledger cannot be allowed to size positions.
+   */
+  goalDailyTarget: number;
   /** Symbol the tick lock is scoped to (defaults to symbol). */
   logLevel: "debug" | "info" | "warn" | "error";
 }
@@ -248,6 +253,7 @@ export function loadConfig(env: Env = process.env): BotConfig {
 
     killSwitch: bool(env, "KILL_SWITCH", false),
     initialPaperUsdt: num(env, "PAPER_START_USDT", 10),
+    goalDailyTarget: num(env, "GOAL_DAILY_TARGET", 1),
     logLevel: oneOf(env, "LOG_LEVEL", ["debug", "info", "warn", "error"] as const, "info"),
   };
 
@@ -268,6 +274,7 @@ export function validate(cfg: BotConfig): void {
     throw new Error("adaptive.maxScale must be >= adaptive.minScale");
   }
 
+  if (!(cfg.goalDailyTarget >= 0)) throw new Error("goalDailyTarget must be >= 0");
   if (!(cfg.risk.positionFraction > 0 && cfg.risk.positionFraction <= 1)) {
     throw new Error("risk.positionFraction must be in (0, 1]");
   }

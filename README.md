@@ -516,6 +516,19 @@ commodity futures back to 1972 ([`docs/ASSETCLASS.md`](docs/ASSETCLASS.md)). The
 t = −2.45)**. The gate is insurance, not alpha — and the crypto result that looked like alpha was
 one cycle.
 
+### The goal line, and what it is allowed to change
+
+```bash
+npm run catchup -- --dir=data/real
+```
+
+The bot reports where the account stands against +$1/day: deficit, today's P&L, and how long the
+gap takes to close at the rate actually achieved. The ledger may change what it *reports*; it is
+never allowed to change how much it *risks* — `plannedRiskMultiplier` returns 1 by construction and
+a test enforces it. The experiment that justifies that rule is in
+[`docs/GOAL.md`](docs/GOAL.md): sizing up to recover a deficit left the median unchanged and
+quadrupled the number of ruined accounts.
+
 ### Learning, if it is ever allowed to happen
 
 ```bash

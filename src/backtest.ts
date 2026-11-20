@@ -22,12 +22,35 @@ import { emptyState } from "./types.ts";
 import { maxDrawdown, sharpe } from "./util/indicators.ts";
 import { DAY_MS, floorToStep, round } from "./util/num.ts";
 
+/**
+ * Research-only hook. Production passes nothing.
+ *
+ * It exists so `npm run catchup` can ask the honest question — "what if the bot
+ * sized up when behind, or stopped at a daily quota?" — against the same fill
+ * model instead of a re-implementation of it. Anything that can change size
+ * from outside the strategy is, by construction, a thing to measure before it
+ * is ever allowed near a live balance.
+ */
+export interface OverlayCtx {
+  ts: number;
+  equity: number;
+  cash: number;
+  dayStartEquity: number;
+  qty: number;
+}
+
+export interface OverlayResult {
+  sizeMultiplier?: number;
+  blockEntries?: boolean;
+}
+
 export interface BacktestOptions {
   cfg: BotConfig;
   daily: Candle[];
   hourly: Candle[];
   capital: number;
   info: SymbolInfo;
+  overlay?: (ctx: OverlayCtx) => OverlayResult;
 }
 
 export interface BacktestResult {
@@ -114,6 +137,10 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
     const risk = refreshRisk(state, equity, now, cfg);
     state = risk.state;
 
+    const ov: OverlayResult = opts.overlay
+      ? opts.overlay({ ts: now, equity, cash, dayStartEquity: state.dayStartEquity, qty })
+      : {};
+
     const positionForEval: Position | null =
       qty > 0 && position ? { ...position, qty } : null;
 
@@ -158,10 +185,17 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
       qty = 0;
       costBasis = 0;
       position = null;
-    } else if (decision.action === "ENTER_LONG" && qty === 0 && !risk.entriesBlocked) {
+    } else if (decision.action === "ENTER_LONG" && qty === 0 && !risk.entriesBlocked && !ov.blockEntries) {
       const snap = adaptiveFraction(daily.slice(0, i + 1), cfg);
       const sizing = sizePosition(cash, price, info, cfg, snap.fraction);
       if (sizing.ok) {
+        const mult = Math.max(0, ov.sizeMultiplier ?? 1);
+        if (mult !== 1) {
+          // Spot only: a catch-up multiplier can spend more of the cash but can
+          // never borrow, so the worst case stays a smaller balance.
+          sizing.notional = Math.min(cash, sizing.notional * mult);
+          if (sizing.notional < info.minNotional) { sizing.ok = false; }
+        }
         // Same fill model as PaperExchange and as Binance: quantity rounds down
         // to the lot step, commission is charged in the base asset, and only the
         // quantised amount is actually spent (the dust stays as cash).

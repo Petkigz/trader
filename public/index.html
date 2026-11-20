@@ -158,6 +158,11 @@
           <div class="value" id="cash">—</div>
           <div class="foot" id="cashFoot">&nbsp;</div>
         </div>
+        <div class="card">
+          <div class="label">Goal gap</div>
+          <div class="value" id="goal">—</div>
+          <div class="foot" id="goalFoot">&nbsp;</div>
+        </div>
       </section>
 
       <section class="grid2">
@@ -307,6 +312,17 @@
         $("dd").textContent = `${nf(a.drawdownPct)}%`;
         $("dd").className = `value ${a.drawdownPct > 15 ? "amber" : ""}`;
         $("ddFoot").textContent = `peak ${nf(a.highWaterMark)}`;
+
+        if (s.goal) {
+          const g = s.goal;
+          const short = g.deficit > 0;
+          $("goal").textContent = short ? `-${nf(g.deficit)}` : `+${nf(g.surplus)}`;
+          $("goal").className = `value ${short ? "amber" : "green"}`;
+          $("goalFoot").textContent =
+            g.lastDayPnl === null ? `${nf(g.dailyTarget)}/day target` : `today ${signed(g.lastDayPnl)}`;
+          $("goalFoot").title = g.verdict;
+          $("goal").title = g.verdict;
+        }
 
         $("cash").textContent = `${nf(a.cash)}`;
         $("cashFoot").textContent = p ? `${nf((p.notional / Math.max(a.equity, 1e-9)) * 100, 1)}% deployed` : "100% in cash";

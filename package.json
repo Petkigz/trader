@@ -19,7 +19,8 @@
     "verify": "npm run typecheck && npm test",
     "xsection": "node --experimental-strip-types scripts/xsection.ts",
     "xsmom": "node --experimental-strip-types scripts/xsmom.ts",
-    "challenger": "node --experimental-strip-types scripts/challenger.ts"
+    "challenger": "node --experimental-strip-types scripts/challenger.ts",
+    "catchup": "node --experimental-strip-types scripts/catchup.ts"
   },
   "dependencies": {},
   "devDependencies": {
