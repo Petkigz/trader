@@ -198,6 +198,32 @@ week. The time scale of the strategy and the time scale of the leverage are
 incompatible, and no amount of risk management fixes that — a stop-loss cannot act
 faster than a gap.
 
+### If the goal is "10× your money in a month" instead
+
+The natural response to all of the above is "then I'll use the venue with more leverage". MT5
+does offer far more of it: a 1:500 broker lets a $10 account hold ~4 micro lots ($4,640
+notional, 464× effective), with no 60-day ramp like Binance's. So it is worth asking which
+venue actually gives the better odds of turning $10 into $300 within a month. Simulated,
+60,000 paths, full compounding, FX drift set to zero:
+
+| Venue | Effective leverage | P(reach $300) | P(wiped out) | Median |
+|---|---|---|---|---|
+| MT5, 1 micro lot | 116× | 0.00% | 76.5% | $0.00 |
+| MT5, 2 micro lots | 232× | 0.01% | 85.5% | $0.00 |
+| MT5, 4 micro lots (1:500 max) | 464× | **2.49%** | **89.5%** | $0.00 |
+| **Binance BTC, 125× ceiling** | 125× | **8.90%** | 91.1% | $0.00 |
+
+**MT5 is the worse vehicle for this, despite having 3.7× the leverage.** The reason is that
+leverage multiplies an edge, and EURUSD majors have **essentially zero long-run drift** — so
+there is nothing to multiply but variance. BTC, for all its faults, carries a measured
+positive drift (+23.3%/yr), which is why the *less* leveraged venue wins on the number that
+matters. A driftless asset plus leverage is a coin flip with fees attached.
+
+Both rows are still ~90% total loss, so this is a comparison of two bad bets, not a
+recommendation of the better one. What the table does establish is that the platform choice
+does not rescue the plan: no venue turns $10 into $300 a month reliably, and the one with the
+biggest leverage numbers is the one that helps least.
+
 **The cost per round trip is ~10× worse.** Standard/micro accounts — the only tier
 that accepts a $10 deposit — quote spreads from 0.7–1.2 pips with no commission.
 1 pip on a 0.01 lot is $0.10, so a round trip costs about **$0.20, or 2.0% of equity**,
