@@ -118,6 +118,39 @@ Two things follow, and both are awkward:
 
 So the honest framing: $15,665 of this strategy is roughly a $3,650/year income with a ±$3,700 annual swing, delivered in a handful of lumps, with a one-in-five chance of a negative year. That is an investment, not a salary — do not build a budget on it.
 
+### Why there is no "aggressive mode" that fixes this
+
+The obvious request is a version that trades harder and makes real money on $10. It does not
+exist, and it is worth writing down why so the repo cannot be misread.
+
+To earn **$1/day on $10 is 10% per day.** Compounded, that is $174 in a month, $53,130 in
+ninety days and $1.3×10¹⁶ in a year. The best track record in the history of investing —
+Renaissance Medallion, ~66%/year — is **0.14% per day**. Ten percent a day is roughly **72×
+that**, sustained, by a $10 account on a public exchange. Nothing about venue, strategy or
+leverage changes the arithmetic; a system that could do it would not need to sell itself.
+
+What leverage *does* buy is bigger daily numbers. On a $10 MT5 account at the minimum
+0.01 lot, **40% of days gain more than $1** — against ~0% for this bot, whose daily swing is
+12 cents. That is a genuine advantage on that one metric, and it is exactly why the pitch is
+tempting. It comes with **40% of days losing more than $1**, 10% losing more than $5, and a
+median one-year outcome of **$0.00** (see [`docs/ASSET.md`](docs/ASSET.md) §3). Big days are
+volatility. Daily income is edge. Leverage converts the first into more of itself and turns
+the second into a coin flip that eventually loses.
+
+The binding constraint is capital, not the platform. $1/day needs **$1,567** at the measured
+23.3%, or **$3,650** at a more conservative 10%. Ten dollars is 150–365× short of that, and
+no configuration of any bot closes a gap of that shape. What closes it is contributions:
+
+| Saved per month | Time to $1/day | You contributed | The bot earned |
+|---|---|---|---|
+| $10 | 6.2 years | $760 (48%) | $812 (52%) |
+| $20 | 4.2 years | $1,010 (63%) | $597 (37%) |
+| $50 | 2.1 years | $1,260 (80%) | $309 (20%) |
+| $100 | 1.2 years | $1,410 (89%) | $175 (11%) |
+
+Savings do the work early; compounding does it late. Any plan that promises the reverse is
+selling something.
+
 ### What would actually break it
 
 - The exchange delisting the pair, or exiting your country
