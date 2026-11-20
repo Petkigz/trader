@@ -151,6 +151,25 @@ no configuration of any bot closes a gap of that shape. What closes it is contri
 Savings do the work early; compounding does it late. Any plan that promises the reverse is
 selling something.
 
+### The fee floor caps how often any $10 bot can trade
+
+There is a second, harder barrier to "daily income" that has nothing to do with skill. At
+0.1% per side, every round trip costs 0.2% of the position. Multiply by how often you trade:
+
+| Trades per year | Annual fee drag | Gross return needed to net 10%/yr |
+|---|---|---|
+| ~4.6 (this bot) | 0.9% | 10.9% |
+| 12 (monthly) | 2.4% | 12.4% |
+| 52 (weekly) | 10.4% | 20.4% |
+| **365 (daily)** | **73.0%** | **83.0%** |
+
+A daily-trading bot on Binance does not need to be clever — it needs to beat a **73%/year
+headwind from fees alone**, before it earns a single cent. On smaller or worse venues the
+figure is several times higher. This is why the strategy here trades ~4.6 times a year and
+waits in cash 44% of the time: it is not timidity, it is the only frequency band where costs
+do not swamp the edge. **Any "daily income" method has to clear this table first,** and at $10
+that table is the binding constraint long before the strategy is.
+
 ### What would actually break it
 
 - The exchange delisting the pair, or exiting your country
