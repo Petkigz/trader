@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { defaultSymbolInfo, runBacktest } from "../src/backtest.ts";
+import { loadConfig } from "../src/config.ts";
 import { syntheticCandles } from "../src/data.ts";
 import { testConfig } from "./helpers.ts";
 
@@ -68,5 +69,30 @@ describe("runBacktest", () => {
     const r = runBacktest({ cfg: testConfig(), daily, hourly: [], capital: 10, info: defaultSymbolInfo("BTCUSDT") });
     assert.ok(typeof r.lastSignal.reason === "string");
     assert.ok(r.lastSignal.reason.length > 0);
+  });
+});
+
+describe("trade log", () => {
+  it("is configurable, so loss distributions can be studied", () => {
+  // 12 is a dashboard convenience, not a fact about the strategy; research on
+  // losing streaks needs every fill.
+  const candles = syntheticCandles({ interval: "1d", count: 900, seed: 3 });
+  const cfg = loadConfig({ ...process.env, SYMBOL: "BTCUSDT", STRATEGY: "trend" });
+  const run = () =>
+    runBacktest({ cfg, daily: candles, hourly: [], capital: 10, info: defaultSymbolInfo("BTCUSDT") });
+
+  delete process.env.BACKTEST_TRADE_LOG;
+  const dflt = run();
+  assert.ok(dflt.recentTrades.length <= 12, `default cap is 12, got ${dflt.recentTrades.length}`);
+
+  process.env.BACKTEST_TRADE_LOG = "1000";
+  const full = run();
+  delete process.env.BACKTEST_TRADE_LOG;
+
+  assert.ok(full.recentTrades.length >= dflt.recentTrades.length);
+  // A run can end holding a position, so there may be one more buy than sell.
+  const buys = full.recentTrades.filter((t) => t.side === "BUY").length;
+  const sells = full.recentTrades.filter((t) => t.side === "SELL").length;
+  assert.ok(sells <= buys && buys - sells <= 1, `buys ${buys} / sells ${sells}`);
   });
 });

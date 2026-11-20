@@ -477,6 +477,19 @@ One thing worth knowing: the bot reads **minimum notional, lot step, min quantit
 
 See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter sensitivity sweep, and the trailing-stop experiment that I tested and rejected.
 
+### What the safety rails actually do
+
+```bash
+BACKTEST_TRADE_LOG=1000 npm run backtest -- --csv=data/btc_1d.csv
+```
+
+The bot trades **4 times a year** (0.011/day), loses 23 trades in 33, averages a −4.6% loser and a
++57% winner, and its longest losing streak was 5 — about −27% of the account, which it survives
+because it is spot and unlevered. Switching each safety rail off across 20 assets changes nothing
+measurably (every |t| < 1.7); two of them never fired in seven years. They are insurance against
+intraday gaps the daily backtest cannot see, not the thing earning the returns. See
+[`docs/RISK.md`](docs/RISK.md).
+
 ### Tested across 20 assets, not just BTC
 
 ```bash

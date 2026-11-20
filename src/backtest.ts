@@ -263,7 +263,11 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
     avgHoldDays: holdDays.length ? round(holdDays.reduce((a, b) => a + b, 0) / holdDays.length, 1) : 0,
     equityCurve: downsample(equityCurve, 400),
     monthly: monthlyReturns(equityCurve),
-    recentTrades: [...trades].reverse().slice(0, 12),
+    // 12 is enough for a dashboard; research on loss distributions needs every
+    // trade, so the cap is configurable rather than hard-coded.
+    recentTrades: [...trades]
+      .reverse()
+      .slice(0, Math.max(0, Number(process.env.BACKTEST_TRADE_LOG ?? 12)) || 12),
     lastSignal,
   };
 }
