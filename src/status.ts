@@ -5,7 +5,7 @@
  */
 
 import type { BotConfig } from "./config.ts";
-import { goalStatus, type Pressure } from "./goal.ts";
+import { goalStatus, shortfallToPeak, type Pressure } from "./goal.ts";
 import { summariseTrades, type LedgerSummary } from "./ledger.ts";
 import type { Store } from "./store/types.ts";
 import type { BotState, TickRecord, TradeRecord } from "./types.ts";
@@ -27,10 +27,29 @@ export interface StatusSnapshot {
   account: {
     equity: number;
     cash: number;
+    /** Peak used by the risk rails. Re-based after a circuit breaker. */
     highWaterMark: number;
     drawdownPct: number;
     totalReturnPct: number;
     startEquity: number;
+    /** Highest equity ever seen in the recorded curve — never re-based. */
+    allTimeHigh: number;
+    /** Dollars needed to restore that balance, and the return that implies. */
+    dollarsToRegainPeak: number;
+    pctToRegainPeak: number;
+  };
+  /**
+   * Can this balance place an order at all? Below the exchange minimum the bot
+   * is not paused, it is *stuck*: no signal can be acted on until someone adds
+   * capital, and saying so is the difference between waiting and wasting time.
+   */
+  capital: {
+    minNotional: number;
+    minTradeableEquity: number;
+    belowMinimum: boolean;
+    /** Extra equity needed to place one minimum-sized order. */
+    shortfall: number;
+    message: string;
   };
   position: {
     open: boolean;
@@ -124,14 +143,33 @@ export async function buildStatus(cfg: BotConfig, store: Store, now = Date.now()
 
   const startEquity = cfg.initialPaperUsdt;
   const hwm = state?.highWaterMark ?? equity;
+
+  // The risk rails re-base their peak after a circuit breaker, deliberately, so
+  // the bot can resume. That means the rails forget a loss. This one does not:
+  // the highest equity in the recorded curve is the balance to restore, and
+  // re-basing is exactly the thing that would hide it.
+  const allTimeHigh = Math.max(equity, ...curve.map((p) => p.equity), 0);
+  const regain = shortfallToPeak(equity, allTimeHigh);
+
+  // One minimum-sized order needs `minNotional / positionFraction` of equity,
+  // because the bot never deploys the whole balance in one entry.
+  const minNotional = Math.max(cfg.risk.minNotional, 1);
+  const minTradeableEquity = minNotional / Math.max(cfg.risk.positionFraction, 0.01);
+  const belowMinimum = equity < minTradeableEquity;
+  const capitalShortfall = belowMinimum ? minTradeableEquity - equity : 0;
   const entriesBlocked = Boolean(
-    (state?.haltedUntil ?? 0) > now || (state?.cooldownUntil ?? 0) > now || state?.killSwitch || cfg.killSwitch,
+    (state?.haltedUntil ?? 0) > now ||
+      (state?.cooldownUntil ?? 0) > now ||
+      state?.killSwitch ||
+      cfg.killSwitch ||
+      belowMinimum,
   );
 
   let blockReason = "";
   if (state?.killSwitch || cfg.killSwitch) blockReason = "kill_switch";
   else if ((state?.haltedUntil ?? 0) > now) blockReason = "halted";
   else if ((state?.cooldownUntil ?? 0) > now) blockReason = "cooldown";
+  else if (belowMinimum) blockReason = "below_min_notional";
 
   return {
     ok: true,
@@ -154,6 +192,19 @@ export async function buildStatus(cfg: BotConfig, store: Store, now = Date.now()
       drawdownPct: hwm > 0 ? round(((hwm - equity) / hwm) * 100, 2) : 0,
       totalReturnPct: startEquity > 0 ? round(((equity - startEquity) / startEquity) * 100, 2) : 0,
       startEquity,
+      allTimeHigh: round(allTimeHigh, 4),
+      dollarsToRegainPeak: round(regain.dollars, 4),
+      pctToRegainPeak: Number.isFinite(regain.pct) ? round(regain.pct, 2) : Number.POSITIVE_INFINITY,
+    },
+    capital: {
+      minNotional,
+      minTradeableEquity: round(minTradeableEquity, 2),
+      belowMinimum,
+      shortfall: round(capitalShortfall, 2),
+      message: belowMinimum
+        ? `below the exchange minimum: ${round(equity, 2)} USDT cannot place a ${minNotional} USDT order. ` +
+          `Needs ${round(capitalShortfall, 2)} more to trade again — no signal can be acted on until then.`
+        : "above the exchange minimum",
     },
     position:
       position && position.qty > 0

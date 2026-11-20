@@ -72,6 +72,16 @@ export function buildDemoSnapshot(cfg: BotConfig, now = Date.now()): StatusSnaps
       drawdownPct: result.maxDrawdownPct,
       totalReturnPct: result.totalReturnPct,
       startEquity: cfg.initialPaperUsdt,
+      allTimeHigh: round(Math.max(...curve.map((p) => p.equity), equity), 4),
+      dollarsToRegainPeak: round(Math.max(0, Math.max(...curve.map((p) => p.equity), equity) - equity), 4),
+      pctToRegainPeak: round(Math.max(0, (Math.max(...curve.map((p) => p.equity), equity) / Math.max(equity, 1e-9) - 1) * 100), 2),
+    },
+    capital: {
+      minNotional: cfg.risk.minNotional,
+      minTradeableEquity: round(cfg.risk.minNotional / cfg.risk.positionFraction, 2),
+      belowMinimum: equity < cfg.risk.minNotional / cfg.risk.positionFraction,
+      shortfall: round(Math.max(0, cfg.risk.minNotional / cfg.risk.positionFraction - equity), 2),
+      message: "demo data",
     },
     position: null,
     risk: {

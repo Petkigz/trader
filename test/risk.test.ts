@@ -161,3 +161,23 @@ describe("realizedPnl", () => {
     assert.ok(realizedPnl({ quoteQty: 9, feeQuote: 0.01 }, 10) < 0);
   });
 });
+
+describe("a balance below the exchange minimum", () => {
+  it("is reported as stuck rather than as a normal cooldown", () => {
+    const r = refreshRisk(fresh(3), 3, NOW, cfg);
+    assert.equal(r.entriesBlocked, true);
+    assert.equal(r.blockReason, "below_min_notional");
+  });
+
+  it("does not block a balance that can still place an order", () => {
+    // $10 at 97% is $9.70, comfortably above the $5 minimum.
+    const r = refreshRisk(fresh(10), 10, NOW, cfg);
+    assert.notEqual(r.blockReason, "below_min_notional");
+  });
+
+  it("sizes nothing at all when the order would be too small", () => {
+    const s = sizePosition(3, 100, info, testConfig());
+    assert.equal(s.ok, false);
+    assert.equal(s.reason, "below_min_notional");
+  });
+});

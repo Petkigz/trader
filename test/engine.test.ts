@@ -90,7 +90,10 @@ describe("runTick — entry", () => {
 
     const res = await runTick(makeDeps(exchange, store, now));
     assert.equal(res.action, "HOLD");
-    assert.equal(res.reason, "below_min_notional");
+    // The rail now blocks before sizing is even attempted, so the reason names
+    // the cause rather than a failed calculation: $4 cannot fund a $5 order.
+    assert.equal(res.reason, "blocked:below_min_notional");
+    assert.match(res.detail, /below_min_notional/);
     assert.equal(exchange.orders.length, 0);
   });
 

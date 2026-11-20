@@ -318,10 +318,17 @@
           const short = g.deficit > 0;
           $("goal").textContent = short ? `-${nf(g.deficit)}` : `+${nf(g.surplus)}`;
           $("goal").className = `value ${short ? "amber" : "green"}`;
+          const today = g.lastDayPnl === null ? `${nf(g.dailyTarget)}/day target` : `today ${signed(g.lastDayPnl)}`;
           $("goalFoot").textContent =
-            g.lastDayPnl === null ? `${nf(g.dailyTarget)}/day target` : `today ${signed(g.lastDayPnl)}`;
-          $("goalFoot").title = g.verdict;
-          $("goal").title = g.verdict;
+            a.dollarsToRegainPeak > 0.01 ? `${today} · ${nf(a.dollarsToRegainPeak)} to regain peak` : today;
+          $("goalFoot").title = `${g.verdict}${a.dollarsToRegainPeak > 0.01 ? `\nregaining the peak needs +${nf(a.pctToRegainPeak, 0)}%` : ""}`;
+          $("goal").title = $("goalFoot").title;
+        }
+
+        if (s.capital && s.capital.belowMinimum) {
+          // Stuck, not paused: no order can clear the exchange minimum, so no
+          // signal matters until the balance grows. Say so in the banner.
+          banner("danger", s.capital.message);
         }
 
         $("cash").textContent = `${nf(a.cash)}`;

@@ -9,6 +9,7 @@ import {
   escapeVelocity,
   goalStatus,
   planParticipation,
+  shortfallToPeak,
   recoveryStats,
   utcMidnight,
   type GoalConfig,
@@ -292,4 +293,46 @@ test("an account that only ever rises has no drawdown to recover", () => {
   assert.equal(r.neverRecovered, 0);
   assert.equal(r.medianRecoveryDays, null);
   assert.equal(r.daysUnderwaterPct, 0);
+});
+
+test("the dollars needed to regain a peak, and the return that implies", () => {
+  const fromThree = shortfallToPeak(3, 15);
+  assert.equal(fromThree.dollars, 12);
+  assert.equal(fromThree.pct, 400, "$3 back to $15 is a 400% climb, not a $12 errand");
+  assert.equal(fromThree.recoverable, true);
+
+  const wipedOut = shortfallToPeak(0, 15);
+  assert.equal(wipedOut.dollars, 15);
+  assert.equal(wipedOut.pct, Infinity);
+  assert.equal(wipedOut.recoverable, false);
+
+  // Already at or above the peak: nothing to regain.
+  assert.equal(shortfallToPeak(20, 15).dollars, 0);
+});
+
+test("status names the dollars to regain the peak and the minimum tradeable balance", async () => {
+  const { buildStatus } = await import("../src/status.ts");
+  const { MemoryStore } = await import("../src/store/memory.ts");
+  const { testConfig } = await import("./helpers.ts");
+
+  const store = new MemoryStore();
+  const cfg = testConfig({ PAPER_START_USDT: "10", MIN_NOTIONAL: "5", POSITION_FRACTION: "0.97" });
+  const t0 = Date.UTC(2026, 0, 1);
+  const state = (await store.getState())!;
+  await store.saveState({ ...state, paperUsdt: 3, highWaterMark: 3, dayStartEquity: 9 } as typeof state);
+  // A recorded peak of $15, then a collapse to $3.
+  for (const [d, eq] of [[0, 10], [1, 15], [2, 3]] as Array<[number, number]>) {
+    await store.recordTick({
+      ts: t0 + d * DAY_MS, equity: eq, price: 100, action: "HOLD", reason: "test", detail: "",
+    } as Parameters<typeof store.recordTick>[0]);
+  }
+
+  const s = await buildStatus(cfg, store, t0 + 3 * DAY_MS);
+  assert.equal(s.account.allTimeHigh, 15);
+  assert.equal(s.account.dollarsToRegainPeak, 12, "the balance it must fill is $12");
+  assert.ok(s.account.pctToRegainPeak > 399, "which is a 400% climb from $3");
+  assert.equal(s.capital.belowMinimum, true, "$3 cannot place a $5 order");
+  assert.ok(s.capital.shortfall > 2 && s.capital.shortfall < 2.3);
+  assert.match(s.capital.message, /cannot place/);
+  assert.equal(s.risk.blockReason, "below_min_notional");
 });

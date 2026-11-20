@@ -135,6 +135,59 @@ eventually beat a linear line — around 88 years out for a 9%/yr account starti
 why `daysToCloseGap` reports "not within 30 years" rather than "never". The distinction matters
 because "never" invites argument and "88 years" does not.
 
+## 2c. Does it grow every day, or only every few years? — in bursts
+
+```bash
+npm run growth -- --dir=data/real
+```
+
+Champion, 20 assets, 2020→now:
+
+| | |
+|---|---|
+| Up days | 19% |
+| Down days | 20% |
+| Flat days (in cash, no position) | **61%** |
+| Days that account for the entire net gain | **4 out of ~2,300 (0.2%)** |
+| Best 1% of days, as a multiple of the final gain | **2.6×** (the rest gave some back) |
+| Median wait between new highs | 1 day |
+| 90th percentile wait | 16 days |
+| Worst wait | **1,386 days (3.8 years)** |
+
+By calendar year (median asset): 2020 +7.1%, 2021 +59.8%, 2022 −8.3%, 2023 +2.3%, 2024 +39.0%,
+2025 −18.3%, 2026 −7.1%.
+
+So: **not every day, and not reliably every four years either.** The money arrives in a handful of
+days per year — four days out of 2,300 in the median asset account for the whole gain — and the gaps
+between those days are unpredictable, up to nearly four years. That is the honest shape of a trend
+follower, and it explains why "make it back tomorrow" is a coin flip rather than a plan: tomorrow is
+flat 61% of the time, and the days that pay cannot be scheduled.
+
+## 2d. "If only $3 is left, does it know it needs $12?" — it does now
+
+Two separate gaps were being conflated, and only one was visible before:
+
+- **Against the goal line** — reported in the dashboard's Goal gap card.
+- **Against the peak it once had** — now reported in dollars. Going $15 → $3 means
+  `dollarsToRegainPeak = 12`, and `pctToRegainPeak = 400%`, because those are wildly different
+  things to ask of an account. The peak is taken from the recorded equity curve and is **never
+  re-based**; the risk rails re-base after a circuit breaker so the bot can resume, and that
+  re-basing is exactly what would otherwise erase the memory of the loss.
+
+And a harder problem sits underneath: **at $3 the bot cannot trade at all.** The exchange minimum is
+$5 and the bot never deploys its whole balance, so one minimum order needs
+`$5 / 0.97 = $5.15` of equity. Below that the bot is not paused, it is *stuck*: every signal is
+unactionable and no amount of waiting or cleverness changes that. It used to log a warning and keep
+saying "ready" on the dashboard. Now:
+
+- `risk.blockReason = "below_min_notional"` instead of silently retrying;
+- `status.capital` reports the minimum tradeable balance, the shortfall, and a plain message;
+- the dashboard shows a red banner: *"below the exchange minimum: 3.00 USDT cannot place a 5 USDT
+  order. Needs 2.15 more to trade again."*
+
+The dollars are the point. A $12 gap on a $3 balance is not a $12 problem, it is a +400% problem,
+and the second number is the one that should decide anything.
+
 ## 3. "Trade when there are opportunities, not to a quota" — already true, with a catch
 
 There is no quota anywhere in the engine. No rule stops trading because a target was hit; the only

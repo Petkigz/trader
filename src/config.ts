@@ -40,6 +40,8 @@ export interface RiskParams {
   maxConsecutiveLosses: number;
   haltDays: number;
   cooldownHours: number;
+  /** Exchange minimum order size, used to report whether trading is possible. */
+  minNotional: number;
 }
 
 /**
@@ -196,6 +198,13 @@ export function loadConfig(env: Env = process.env): BotConfig {
       maxConsecutiveLosses: num(env, "MAX_CONSECUTIVE_LOSSES", 5),
       haltDays: num(env, "HALT_DAYS", 7),
       cooldownHours: num(env, "COOLDOWN_HOURS", 4),
+      /**
+       * Exchange minimum order size, used for *reporting* whether the balance
+       * can trade at all. Real orders use the exchange's live symbol info; this
+       * is the number the status page reasons about, and it is configurable so
+       * it can match a venue that is stricter.
+       */
+      minNotional: num(env, "MIN_NOTIONAL", 5),
     },
 
     adaptive: {
@@ -275,6 +284,7 @@ export function validate(cfg: BotConfig): void {
   }
 
   if (!(cfg.goalDailyTarget >= 0)) throw new Error("goalDailyTarget must be >= 0");
+  if (!(cfg.risk.minNotional > 0)) throw new Error("risk.minNotional must be > 0");
   if (!(cfg.risk.positionFraction > 0 && cfg.risk.positionFraction <= 1)) {
     throw new Error("risk.positionFraction must be in (0, 1]");
   }

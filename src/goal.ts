@@ -450,6 +450,28 @@ export function chaseMultiplier(deficit: number, equity: number, cap: number): n
   return Math.min(cap, 1 + deficit / equity);
 }
 
+/**
+ * The dollar gap back to a previous balance, and what it costs in return terms.
+ *
+ * These are two very different numbers and both matter: "you need $12" sounds
+ * like one good week, and "+400%" says what that week would have to be. A loss
+ * is cheap to describe and expensive to undo, and the second number is the one
+ * that should decide anything.
+ */
+export function shortfallToPeak(
+  equity: number,
+  peak: number,
+): { dollars: number; pct: number; recoverable: boolean } {
+  if (!(peak > equity)) return { dollars: 0, pct: 0, recoverable: true };
+  const dollars = peak - equity;
+  return {
+    dollars,
+    // Return needed on what is left, i.e. how steep the climb actually is.
+    pct: equity > 0 ? (peak / equity - 1) * 100 : Infinity,
+    recoverable: equity > 0,
+  };
+}
+
 /** Expected USDT per day for a given balance at a given compound rate. */
 export function expectedPerDay(equity: number, cagr: number): number {
   return (equity * cagr) / 365.25;

@@ -526,12 +526,16 @@ npm run catchup -- --dir=data/real
 npm run recover -- --dir=data/real
 ```
 
-Losses get covered by ordinary trading: 88% of 5%+ drawdowns were recovered, median 6 days. What
+Growth arrives in bursts: the median asset gains its entire net return in **4 days out of ~2,300**,
+and the longest wait between new highs was nearly four years — it is flat 61% of days by design.
+Losses still get covered by ordinary trading: 88% of 5%+ drawdowns were recovered, median 6 days. What
 does *not* work is catching up by size — below "escape velocity" (~$1,400 at 30%/yr) a $1/day line
 advances faster than the account can, so the gap widens no matter how the positions are sized.
 
-The bot reports where the account stands against +$1/day: deficit, today's P&L, and how long the
-gap takes to close at the rate actually achieved. The ledger may change what it *reports*; it is
+The bot reports where the account stands against +$1/day: deficit, today's P&L, how long the gap
+takes to close at the rate actually achieved — and how many dollars it needs to regain its previous
+peak (a $15 → $3 account is told it needs $12, which is a 400% climb, not an errand). If the balance
+falls below the exchange minimum it says so plainly instead of idling quietly. The ledger may change what it *reports*; it is
 never allowed to change how much it *risks* — `plannedRiskMultiplier` returns 1 by construction and
 a test enforces it. The experiment that justifies that rule is in
 [`docs/GOAL.md`](docs/GOAL.md): sizing up to recover a deficit left the median unchanged and

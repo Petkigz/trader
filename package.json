@@ -21,7 +21,8 @@
     "xsmom": "node --experimental-strip-types scripts/xsmom.ts",
     "challenger": "node --experimental-strip-types scripts/challenger.ts",
     "catchup": "node --experimental-strip-types scripts/catchup.ts",
-    "recover": "node --experimental-strip-types scripts/recover.ts"
+    "recover": "node --experimental-strip-types scripts/recover.ts",
+    "growth": "node --experimental-strip-types scripts/growth.ts"
   },
   "dependencies": {},
   "devDependencies": {

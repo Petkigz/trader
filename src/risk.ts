@@ -94,6 +94,12 @@ export function refreshRisk(state: BotState, equity: number, now: number, cfg: B
   } else if (!(equity > 0)) {
     entriesBlocked = true;
     blockReason = "no_equity";
+  } else if (equity * cfg.risk.positionFraction < Math.max(cfg.risk.minNotional, 1)) {
+    // Not paused — stuck. No order of any size can clear the exchange minimum,
+    // so every signal is unactionable until someone adds capital. Saying so
+    // beats retrying a doomed order 96 times a day.
+    entriesBlocked = true;
+    blockReason = "below_min_notional";
   }
 
   return { state: s, entriesBlocked, blockReason, events, drawdown, dailyLoss };
