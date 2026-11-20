@@ -32,7 +32,8 @@
     "ceiling": "node --experimental-strip-types scripts/ceiling.ts",
     "schedule": "node --experimental-strip-types scripts/schedule.ts",
     "daily": "node --experimental-strip-types scripts/daily.ts",
-    "income": "node --experimental-strip-types scripts/income.ts"
+    "income": "node --experimental-strip-types scripts/income.ts",
+    "required": "node --experimental-strip-types scripts/required.ts"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",

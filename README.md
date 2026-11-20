@@ -120,6 +120,19 @@ Read as a *rate*, the target at small capital is not demanding, it is arithmetic
 | $3,636 | 99%/yr | 1.7× — needs its best year, every year |
 | $12,180 | 30%/yr | within the measured range |
 
+### If the request is "10% a day"
+
+```bash
+npm run required                                  # $1/day from $10
+npm run required -- --capital=100 --per-day=10
+```
+
+$1/day from $10 is **10% per day, every day** — 2,520%/yr simple, 1.1× the account daily. Left to compound that is **$269.7 billion after one year**, and it passes the entire world economy in **315 trading days**. $10/day from $100 is the identical rate, so it is the identical impossibility.
+
+Against real records: Buffett 0.07%/day, the best long-run hedge fund ~0.20%/day, this bot 0.04%/day. Even the best calendar year Bitcoin ever had (2013, +5,500%) is 1.61%/day, and the best single year of any asset in `data/real` (DOGE, +21,036%) is 2.15%/day — and neither repeated.
+
+A target that no fund, no market and no asset has sustained is not a strategy gap. **No capital and no code produces it**, which is why every figure in this repo is quoted in years.
+
 ### What a given capital makes
 
 ```bash
