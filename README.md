@@ -477,6 +477,26 @@ One thing worth knowing: the bot reads **minimum notional, lot step, min quantit
 
 See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter sensitivity sweep, and the trailing-stop experiment that I tested and rejected.
 
+### Tested across 20 assets, not just BTC
+
+```bash
+npm run xsection -- --dir=data/real --start=2020-01-01
+npm run xsmom -- --dir=data/real
+```
+
+A single asset gives 33 trades in eight years, which cannot separate an edge from luck. So the
+same code runs against a panel of **20 real assets** (`data/real/`, rebuilt from Binance minute
+data), with a pre-registered 50-configuration grid and an in-sample/out-of-sample split.
+
+What it found: the ensemble adds **nothing** (Sharpe better on 7/20, t = −0.01); cross-sectional
+rotation loses out of sample (median −3.0%/yr, 0/50 configs beat holding BTC); and the one thing
+that holds up in both halves of the sample, on one asset and on twenty, is the oldest rule in the
+repo — **be long while the trend is intact, be in cash when it is broken**, which has no fitted
+parameters. Drawdown improves in all seven windows tested.
+
+See [`docs/CROSSSECTION.md`](docs/CROSSSECTION.md) for the tables and the five bugs the panel
+caught.
+
 ### The ensemble: regime switching
 
 ```bash

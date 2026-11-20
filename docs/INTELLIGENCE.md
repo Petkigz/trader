@@ -170,25 +170,33 @@ feature. Here is the graded ledger, so the word "intelligence" is not doing unpa
 
 | Claim | Confidence | Why |
 |---|---|---|
-| Runs unattended for months | **High** | Stateless ticks, atomic locking, reconciliation, 120 passing tests |
-| Caps worst drawdown vs holding | **Moderate** | −61% vs −77% over 8.3 years; downgraded because n = 1 asset |
+| Runs unattended for months | **High** | Stateless ticks, atomic locking, reconciliation, 138 passing tests |
+| "Be long only while the trend is intact" improves risk-adjusted return | **Moderate–high** | 6 of 7 windows improve, in-sample and out, on 1 and 20 assets, with no fitted parameters — [`CROSSSECTION.md`](CROSSSECTION.md) |
+| Caps worst drawdown vs holding | **Moderate–high** | Drawdown improves in all 7 windows; −61% vs −77% on BTC |
 | Adaptive sizing improves risk-adjusted return | **Low** | Cuts drawdown 61% → 53% and return 784% → 478%: de-risking, not edge |
-| Beats buy-and-hold | **Low** | +784% vs +767%, i.e. a tie on return, on one asset, one span |
-| Ensemble selection adds intelligence | **No** | +0.02 mean Sharpe, t ≈ 0.7; the winning window changes with the sample |
-| High-frequency trading is unviable at $10 | **High** (this is a *negative* result) | 39% of the account lost to fees in the measured churn |
+| Beats buy-and-hold on return | **Low** | +784% vs +767% on BTC; on 20 assets, trend beats holding on only 11/20 |
+| Ensemble selection adds intelligence | **None** | 20 assets: Sharpe better on 7/20, t = −0.01, drawdown a coin flip |
+| Cross-sectional rotation adds intelligence | **None** | 0 of 50 configurations beat BTC out of sample; median −3.0%/yr |
+| High-frequency trading is unviable at $10 | **High** (a *negative*) | 39% of the account lost to fees in the measured churn |
 
 Two arithmetic reasons the upper rows can't rise on this evidence:
 
 **The decisions are too few to prove anything.** 33 round trips in 8.3 years is 4 decisions a
 year. For a single predictor at n = 33, the smallest effect that is statistically provable is
 R² ≈ **9.6%**. Real market predictors explain 0.1–1%. So a genuine edge would be sitting an
-order of magnitude below the noise floor — I could not detect it even if it were there, and I
-also cannot rule it out. That is what "not confident" means here: not *wrong*, **unfalsifiable**.
+order of magnitude below the noise floor on a single asset — which is why the panel in
+[`CROSSSECTION.md`](CROSSSECTION.md) was built, and why it is now the only evidence that counts.
 
 **The six spans are not six experiments.** They are nested subsets of one price series sharing
 the same final bar, so they are almost perfectly correlated. Four Sharpe wins out of six has a
-sign-test p of **0.34** — a coin flip with better marketing. Drawdown improving 6/6 would be
-p = 0.016 *if* the spans were independent; they are not, so it stays at "suggestive".
+sign-test p of **0.34** — a coin flip with better marketing. Twenty assets settled it: 7/20,
+t = −0.01.
+
+**The panel settled the rest.** Cross-sectional momentum, 50 configurations, an in-sample and an
+out-of-sample half: the median configuration made 29.8%/yr in sample and −3.0%/yr out, and none
+of the 50 beat simply holding BTC. The one mechanism that improved both halves — the trend gate —
+does so with no fitted parameters, which is why it is the only row above that earns more than
+"low".
 
 What I *am* confident in is the negative work, because negative results don't need a large
 sample to be real: the union-of-exits churn, the fee floor, the temperature knob that could not
@@ -196,17 +204,18 @@ switch anything, `meanrev` losing in all six spans, and the parameter that chang
 when the data changed. Those are mechanical facts, and they are where most of this system's
 actual value has come from.
 
-What would move the second column, in order:
+What would move the second column now:
 
-1. **~30 assets.** Same code, same rules, scored per asset. That converts n = 1 into n ≈ 30
-   weakly-correlated samples and is the only change that can turn t ≈ 0.7 into an answer.
-2. **Years, not spans.** Out-of-sample forward paper trading, which the harness already
-   supports but which no backtest can substitute for.
-3. **A second family that doesn't lose money.** Right now selection is a choice between a
-   winner and a loser, so the best it can do is reduce exposure.
+1. **Forward paper trading.** Two out-of-sample windows from one asset class is one consistent
+   observation, not a law. The harness supports it; only time substitutes for it.
+2. **New asset classes.** The gate is a volatility/crash filter. If it works on equities and FX
+   with the same parameters, that is worth more than any new layer on crypto.
+3. **A second family that doesn't lose money.** Selection between a winner and a loser can only
+   reduce exposure, which is exactly what the measurements show.
 
-Until then the honest description is: **a well-built, risk-controlled trend follower with four
-opinions a year, wearing a more sophisticated harness than its evidence supports.**
+The honest description, after 20 assets: **a risk-controlled trend follower whose only
+defensible intelligence is knowing when to be out of the market — and the panel says that is
+worth more than every layer built on top of it.**
 
 ## 5. Where the multi-venue idea actually stands
 

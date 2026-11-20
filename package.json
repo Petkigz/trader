@@ -15,7 +15,9 @@
     "lock": "node --env-file-if-exists=.env src/cli/halt.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts",
-    "verify": "npm run typecheck && npm test"
+    "verify": "npm run typecheck && npm test",
+    "xsection": "node --experimental-strip-types scripts/xsection.ts",
+    "xsmom": "node --experimental-strip-types scripts/xsmom.ts"
   },
   "dependencies": {},
   "devDependencies": {

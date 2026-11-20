@@ -23,3 +23,17 @@ of truth, and it is small enough to keep in the repository so the comparison in
 ## Rebuild
 
 See `docs/ENSEMBLE.md` § "How to reproduce".
+
+## `real/` — the 20-asset panel
+
+`data/real/*.csv` holds one file per symbol, same format and same pipeline:
+BTCUSDT, ETHUSDT, BNBUSDT, LTCUSDT, NEOUSDT, ADAUSDT, ETCUSDT, IOTAUSDT,
+ONTUSDT, QTUMUSDT, TRXUSDT, VETUSDT, XLMUSDT, XRPUSDT, ALGOUSDT, ATOMUSDT,
+BCHUSDT, DOGEUSDT, LINKUSDT, THETAUSDT.
+
+2.3 MB total, 3,035–3,240 days each, all ending 2026-11-14. Verified against
+public reference prices (ETH closed 4,628.78 on 2021-11-10; ADA's high that day
+was 2.331; LTC on 2018-01-01 closed 222.61).
+
+This panel is what `docs/CROSSSECTION.md` measures, and it exists so that claim
+can be re-run offline by anyone rather than trusted.
