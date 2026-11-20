@@ -137,7 +137,10 @@ order that exists (0.01 lots ≈ $1,160 notional) leaves an account 116× levere
 chance of ruin within a year. At $100 ruin falls to **24.6%** and the median year is flat, so $100
 is the first size that is not a guaranteed wipeout — but the goal is still arithmetic away: one lot
 can move about $87 in a year, so +$365 needs a 31.5% EURUSD move. MT5 is sane at **$276** and
-$1/day becomes attemptable at **$3,650**, where the position scales (0.03 lots).
+$1/day becomes attemptable at **$3,650**, where the position scales (0.03 lots) — but none of that
+matters until there is an edge: on the seven currency series in `data/realclass`, the bot's own rule
+earns **+1.02%/yr** median over full history and **−1.43%/yr** over the last 30%, with 0/7 currencies
+positive in the recent sample (`npm run fx:edge`). A second venue is a research problem first.
 
 What leverage *does* buy is bigger daily numbers. On a $10 MT5 account at the minimum
 0.01 lot, **40% of days gain more than $1** — against ~0% for this bot, whose daily swing is

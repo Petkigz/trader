@@ -263,6 +263,55 @@ one-in-four chance over a year — which is exactly what the simulation reports 
 probability is a property of the leverage, not of the strategy: no stop-loss changes it, because
 the stop is the margin floor.
 
+### Three thresholds, and only one of them is about money
+
+The $276 figure answered "when does MT5 stop being a wipeout". It does **not** answer "when does
+MT5 make money", and it is worth separating the three questions because they have three different
+answers:
+
+| Question | Answer | How it was measured |
+|---|---|---|
+| When does MT5 stop being a coin flip on survival? | **$276** | `npm run venues` — P(dead in 1yr) falls to 0.2% |
+| When can a position be scaled to attempt $1/day? | **$3,650** | same — 0.03 lots, but P(+$365) is only 14.6% |
+| When does it actually earn anything? | **it does not, at any size** | `npm run fx:edge` — below |
+
+### What MT5 would earn: the edge, measured
+
+The venue simulations assume **zero drift**. That assumption is not neutral — it is the difference
+between "survives" and "profitable" — so it was checked against the seven currency series already in
+`data/realclass`:
+
+**The bot's own rule (long above the 200-day EMA), per currency:**
+
+| | Full history | Last 30% |
+|---|---|---|
+| Median CAGR | **+1.02%/yr** | **−1.43%/yr** |
+| Positive | 7/7 currencies | **0/7 currencies** |
+
+**Cross-sectional momentum across the seven (fixed 4×3 grid, no gate):**
+
+| | 12 configs |
+|---|---|
+| Median CAGR, full history | **+2.01%/yr** |
+| Median CAGR, last 30% | **−3.08%/yr** |
+| Best cell, full history | +4.19%/yr (best of 12 — not a headline) |
+
+At 2%/yr, $1/day needs **$18,162** of equity. At the last-30% number it needs an edge that does not
+exist. The crypto trend rule, by contrast, measured 23.3–30%/yr, which is why the same $1/day is a
+$1,220–$3,684 question there.
+
+**So the answer to "MT5 needs $276" is: $276 buys survival, not profit.** The binding constraint on
+a second venue is not the balance and not the platform — it is that this strategy has no measured
+edge on currencies, and in the recent sample the sign is negative. Buying more equity would buy the
+same absence of edge at larger size.
+
+Caveats, stated because they matter: the FX series are back-adjusted continuous futures from
+`pysystemtrade`, not spot MT5 quotes; the last 30% of those series is roughly the last decade and no
+series runs past ~2020; there is no carry and no interest on cash, and carry is a large part of real
+FX returns. This is an exploratory measurement — 12 configs, not the 40-config pre-registered
+protocol — so it is enough to say "this needs a separate research programme before anyone funds it",
+and not enough to promote anything.
+
 **$276 is the threshold.** Not because the strategy improves — it does not — but because at
 that equity one ordinary EURUSD day costs 2.6% of the account, the same as the spot bot, and
 the margin floor is no longer reachable by weather. Below $100 you are not trading an edge,

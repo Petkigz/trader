@@ -289,6 +289,13 @@ function main(): void {
     );
   }
 
+  console.log(
+    "\nAssumption to keep in view: these paths have zero drift. That is generous to MT5,\n" +
+      "not harsh - measured on the currency panel, the bot's rule earns +1.02%/yr median\n" +
+      "over full history and -1.43%/yr over the last 30%, with 0/7 currencies positive\n" +
+      "recently (npm run fx:edge). A venue cannot supply expectancy the asset class lacks.",
+  );
+
   const stress = mt5Sim(start, FX.stressVol, SEED);
   console.log(
     `\nStress test at ${money(start)} with FX vol cut to ${pct(FX.stressVol)} (40% below measured): ` +
