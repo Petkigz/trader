@@ -497,6 +497,12 @@ parameters. Drawdown improves in all seven windows tested.
 See [`docs/CROSSSECTION.md`](docs/CROSSSECTION.md) for the tables and the five bugs the panel
 caught.
 
+Then the same rule was tested where decades of independent history exist — 26 equity, bond, FX and
+commodity futures back to 1972 ([`docs/ASSETCLASS.md`](docs/ASSETCLASS.md)). The verdict darkened:
+**drawdown improves in 22 of 26 out of sample, but risk-adjusted return does not improve (8/26,
+t = −2.45)**. The gate is insurance, not alpha — and the crypto result that looked like alpha was
+one cycle.
+
 ### The ensemble: regime switching
 
 ```bash

@@ -103,8 +103,8 @@ async function main(): Promise<void> {
   const grid: Array<{ params: XsMomParams; is: XsMomResult; oos: XsMomResult; full: XsMomResult }> = [];
   for (const lookback of flags.lookbacks) {
     for (const hold of flags.holds) {
-      for (const btcFilter of [false, true]) {
-        const params: XsMomParams = { ...defaultXsMomParams, lookback, hold, btcFilter };
+      for (const gate of [null, "BTCUSDT"]) {
+        const params: XsMomParams = { ...defaultXsMomParams, lookback, hold, gate };
         grid.push({
           params,
           is: runXsMom(is, params),
@@ -129,7 +129,7 @@ async function main(): Promise<void> {
   console.log(`${"lk".padStart(4)} ${"hold".padStart(5)} ${"btc".padStart(4)}   ${"cagr".padStart(10)} ${"sharpe".padStart(7)} ${"maxDD".padStart(8)} ${"invest".padStart(7)} ${"fees".padStart(7)}`);
   for (const g of grid) {
     console.log(
-      `${pad(String(g.params.lookback), 4)} ${pad(g.params.hold >= panel.length ? "all" : String(g.params.hold), 5)} ${pad(g.params.btcFilter ? "on" : "off", 4)}   ${line(g.full)}`,
+      `${pad(String(g.params.lookback), 4)} ${pad(g.params.hold >= panel.length ? "all" : String(g.params.hold), 5)} ${pad(g.params.gate === null ? "off" : "on", 4)}   ${line(g.full)}`,
     );
   }
 
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   console.log(`configs beating BTC buy-and-hold on OOS CAGR: ${grid.filter((g) => g.oos.cagrPct > btcOos.cagrPct).length}/${grid.length}`);
   console.log(
     `\nbest in-sample: lookback ${bestInSample.params.lookback}, hold ${bestInSample.params.hold}, ` +
-      `btc filter ${bestInSample.params.btcFilter ? "on" : "off"} → IS ${fmt(bestInSample.is.cagrPct)}%/yr, ` +
+      `gate ${bestInSample.params.gate === null ? "off" : "on"} → IS ${fmt(bestInSample.is.cagrPct)}%/yr, ` +
       `then OOS ${fmt(bestInSample.oos.cagrPct)}%/yr (equal-weight ${fmt(ewOos.cagrPct)}%)`,
   );
 

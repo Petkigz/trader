@@ -35,12 +35,22 @@ export interface XsMomParams {
   lookback: number;
   /** How many assets to hold at once. */
   hold: number;
-  /** Stand aside while BTC trades below its EMA200. */
-  btcFilter: boolean;
+  /**
+   * Regime gate: the symbol whose EMA200 decides whether anything may be held.
+   * `null` disables the gate. For a single-asset run pass that asset's own
+   * symbol (the classic 200-day rule); for a crypto basket pass "BTCUSDT".
+   */
+  gate: string | null;
   /** Rebalance every N trading days. */
   rebalanceDays: number;
   /** Only hold assets with positive trailing return. */
   requirePositive: boolean;
+  /**
+   * Take short positions on negative-momentum assets instead of ignoring them.
+   * With `hold` >= the universe this is classic time-series momentum: equal
+   * weight, sign of the trailing return, long and short.
+   */
+  allowShort: boolean;
   feeRate: number;
   slippageBps: number;
 }
@@ -66,9 +76,10 @@ export interface XsMomResult {
 export const defaultXsMomParams: XsMomParams = {
   lookback: 90,
   hold: 1,
-  btcFilter: true,
+  gate: "BTCUSDT",
   rebalanceDays: 30,
   requirePositive: true,
+  allowShort: false,
   feeRate: 0.001,
   slippageBps: 2,
 };
@@ -163,13 +174,15 @@ export function isTrading(aligned: Aligned, symbol: string, i: number): boolean 
 export function runXsMom(assets: readonly PanelAsset[], params: XsMomParams): XsMomResult {
   const aligned = alignPanel(assets);
   const { days, closes } = aligned;
-  const btc = closes.get("BTCUSDT");
-  // A filter that silently does nothing because its reference asset is absent
-  // would look like evidence that the filter doesn't work. Fail loudly instead.
-  if (params.btcFilter && btc === undefined) {
-    throw new Error("btcFilter requires BTCUSDT in the panel");
+  const gateSeries = params.gate === null ? undefined : closes.get(params.gate);
+  // A gate that silently does nothing because its reference asset is absent
+  // would look like evidence the gate doesn't work. Fail loudly instead.
+  if (params.gate !== null && gateSeries === undefined) {
+    throw new Error(`gate "${params.gate}" is not in the panel`);
   }
-  const btcEma = btc ? ema(btc.map((v) => (Number.isFinite(v) ? v : 0)), 200) : [];
+  const gateEma = gateSeries
+    ? ema(gateSeries.map((v) => (Number.isFinite(v) ? v : 0)), 200)
+    : [];
   const slip = params.slippageBps / 10_000;
   const costPerUnitTurnover = params.feeRate + slip;
 
@@ -189,7 +202,7 @@ export function runXsMom(assets: readonly PanelAsset[], params: XsMomParams): Xs
   // early "gated" trades were not gated at all). The 200-bar floor applies to
   // gated and ungated runs alike — otherwise the two arms start on different
   // dates and the comparison silently becomes "different history" vs "gate".
-  const warmup = Math.max(params.lookback, 200);
+  const warmup = Math.max(params.lookback, params.gate === null ? 0 : 200);
   const period = Math.max(1, params.rebalanceDays);
 
   for (let i = 0; i < days.length; i++) {
@@ -206,31 +219,39 @@ export function runXsMom(assets: readonly PanelAsset[], params: XsMomParams): Xs
         if (Number.isFinite(px as number)) value += qty * (px as number);
       }
 
-      let target: string[] = [];
+      const targetWeights = new Map<string, number>();
       const blocked =
-        params.btcFilter &&
-        btc !== undefined &&
-        Number.isFinite(btc[i]) &&
-        Number.isFinite(btcEma[i]) &&
-        btc[i] < btcEma[i];
+        gateSeries !== undefined &&
+        Number.isFinite(gateSeries[i]) &&
+        Number.isFinite(gateEma[i]) &&
+        gateSeries[i] < gateEma[i];
       if (!blocked) {
-        const ranked = rankMomentum(aligned, i, params.lookback).filter(
-          (r) => !params.requirePositive || r.momentum > 0,
-        );
-        target = ranked.slice(0, params.hold).map((r) => r.symbol);
+        const rankedAll = rankMomentum(aligned, i, params.lookback);
+        if (params.allowShort) {
+          // Equal weight (1/N of the universe) with the sign of momentum:
+          // long the risers, short the fallers, in one pass.
+          const n = Math.max(rankedAll.length, 1);
+          for (const r of rankedAll) {
+            if (r.momentum > 0) targetWeights.set(r.symbol, 1 / n);
+            else if (r.momentum < 0) targetWeights.set(r.symbol, -1 / n);
+          }
+        } else {
+          const ranked = rankedAll.filter((r) => !params.requirePositive || r.momentum > 0);
+          const picked = ranked.slice(0, params.hold);
+          for (const r of picked) targetWeights.set(r.symbol, 1 / picked.length);
+        }
       }
 
-      const targetWeight = target.length > 0 ? 1 / target.length : 0;
       const currentValue = new Map<string, number>();
       for (const [symbol, qty] of units) {
         const px = closes.get(symbol)?.[i];
         currentValue.set(symbol, Number.isFinite(px as number) ? qty * (px as number) : 0);
       }
 
-      const allSymbols = new Set([...units.keys(), ...target]);
+      const allSymbols = new Set([...units.keys(), ...targetWeights.keys()]);
       let traded = 0;
       for (const symbol of allSymbols) {
-        const want = target.includes(symbol) ? targetWeight * value : 0;
+        const want = (targetWeights.get(symbol) ?? 0) * value;
         traded += Math.abs(want - (currentValue.get(symbol) ?? 0));
       }
       const cost = traded * costPerUnitTurnover;
@@ -240,18 +261,18 @@ export function runXsMom(assets: readonly PanelAsset[], params: XsMomParams): Xs
       cash = equity;
       units.clear();
 
-      for (const symbol of target) {
+      for (const [symbol, weight] of targetWeights) {
         const px = closes.get(symbol)?.[i];
         if (!Number.isFinite(px as number) || !((px as number) > 0)) continue;
         if (!isTrading(aligned, symbol, i)) continue;
-        const notional = targetWeight * equity;
+        const notional = weight * equity;
         units.set(symbol, notional / (px as number));
         cash -= notional;
       }
 
       rebalances += 1;
-      if (target.length > 0) investedRebalances += 1;
-      holdingsSum += target.length;
+      if (targetWeights.size > 0) investedRebalances += 1;
+      holdingsSum += targetWeights.size;
     }
 
     // Daily mark to market (the last bar of the loop sets the final equity).

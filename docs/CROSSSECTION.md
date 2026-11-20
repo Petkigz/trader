@@ -153,6 +153,11 @@ There is a sixth, conceptual one: the BTC filter was a **silent no-op** when BTC
 was absent from the panel. It now throws. Every one of these was silent, and
 every one would have biased results in a direction that looked plausible.
 
+> **Followed up in [`ASSETCLASS.md`](ASSETCLASS.md).** The crypto result that the gate improves
+> *risk-adjusted return* was tested on 26 non-crypto futures markets and only half survived: the
+> drawdown reduction generalises (22/26 out of sample), the Sharpe improvement does not (8/26,
+> t = −2.45). Read the gate claim there, not here.
+
 ## What this does and does not establish
 
 Established, with a real sample:

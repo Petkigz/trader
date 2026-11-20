@@ -37,3 +37,13 @@ was 2.331; LTC on 2018-01-01 closed 222.61).
 
 This panel is what `docs/CROSSSECTION.md` measures, and it exists so that claim
 can be re-run offline by anyone rather than trusted.
+
+## `realclass/` — 32 non-crypto futures series
+
+`data/realclass/*.csv`, 9.7 MB, from `pst-group/pysystemtrade`
+(`data/futures/adjusted_prices_csv`): equity indices, bonds, FX and commodities, some back to
+1972. Fetched by `scripts/fetch-assetclass.py`.
+
+Six of the 32 (CRUDE_W, GILT, HANG, SOYBEAN, US10, US20) still contain raw contract rolls in
+their published adjusted prices; `scripts/assetclass.ts` excludes any series with a >50% daily
+move, so they cannot contaminate a result. This is the evidence base for `docs/ASSETCLASS.md`.

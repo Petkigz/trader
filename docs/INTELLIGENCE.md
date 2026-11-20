@@ -171,8 +171,9 @@ feature. Here is the graded ledger, so the word "intelligence" is not doing unpa
 | Claim | Confidence | Why |
 |---|---|---|
 | Runs unattended for months | **High** | Stateless ticks, atomic locking, reconciliation, 138 passing tests |
-| "Be long only while the trend is intact" improves risk-adjusted return | **Moderate–high** | 6 of 7 windows improve, in-sample and out, on 1 and 20 assets, with no fitted parameters — [`CROSSSECTION.md`](CROSSSECTION.md) |
-| Caps worst drawdown vs holding | **Moderate–high** | Drawdown improves in all 7 windows; −61% vs −77% on BTC |
+| "Be long only while the trend is intact" reduces drawdown | **High** | 22 of 26 non-crypto instruments out of sample, four asset classes, fifty years, median −11 points — [`ASSETCLASS.md`](ASSETCLASS.md) |
+| The same rule improves risk-adjusted *return* | **Low** | Fails outside crypto (8/26 out of sample, t = −2.45); the crypto win is one cycle, not a law |
+| Caps worst drawdown vs holding | **High** | −61% vs −77% on BTC; drawdown better in 7/7 crypto windows and 22/26 futures |
 | Adaptive sizing improves risk-adjusted return | **Low** | Cuts drawdown 61% → 53% and return 784% → 478%: de-risking, not edge |
 | Beats buy-and-hold on return | **Low** | +784% vs +767% on BTC; on 20 assets, trend beats holding on only 11/20 |
 | Ensemble selection adds intelligence | **None** | 20 assets: Sharpe better on 7/20, t = −0.01, drawdown a coin flip |
@@ -206,16 +207,20 @@ actual value has come from.
 
 What would move the second column now:
 
-1. **Forward paper trading.** Two out-of-sample windows from one asset class is one consistent
-   observation, not a law. The harness supports it; only time substitutes for it.
-2. **New asset classes.** The gate is a volatility/crash filter. If it works on equities and FX
-   with the same parameters, that is worth more than any new layer on crypto.
+1. **Forward paper trading.** Every result here is still a backtest. The harness supports it; only
+   time substitutes for it.
+2. **A reason for the crypto gap.** The gate improved Sharpe on crypto and degraded it on futures.
+   Either crypto's crashes are violent enough that insurance pays for itself, or 2019–2026 was a
+   lucky cycle. Separating those two needs more cycles, not more code.
 3. **A second family that doesn't lose money.** Selection between a winner and a loser can only
    reduce exposure, which is exactly what the measurements show.
 
-The honest description, after 20 assets: **a risk-controlled trend follower whose only
-defensible intelligence is knowing when to be out of the market — and the panel says that is
-worth more than every layer built on top of it.**
+The honest description, after 20 crypto assets and 26 non-crypto instruments: **a stop-loss with
+a good marketing department.** Knowing when to be out of the market reliably halves drawdown
+across four asset classes and fifty years — that part survives everything — but it does not
+reliably improve return, and the version of it that looked like alpha in crypto was one cycle.
+
+Insurance is worth running. It is still a cost, not an income.
 
 ## 5. Where the multi-venue idea actually stands
 

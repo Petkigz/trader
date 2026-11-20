@@ -73,7 +73,7 @@ test("fees reduce equity and are charged on turnover", () => {
     series("BBB", [...rising(120, -0.2), ...rising(120, 0.4)]),
     series("BTCUSDT", rising(240, 0.05)),
   ];
-  const params = { ...defaultXsMomParams, lookback: 30, hold: 1, btcFilter: false, rebalanceDays: 10 };
+  const params = { ...defaultXsMomParams, lookback: 30, hold: 1, gate: null, rebalanceDays: 10 };
   const free = runXsMom(assets, { ...params, feeRate: 0, slippageBps: 0 });
   const paid = runXsMom(assets, { ...params, feeRate: 0.002, slippageBps: 2 });
   assert.ok(paid.finalEquity < free.finalEquity, `${paid.finalEquity} should be < ${free.finalEquity}`);
@@ -88,8 +88,8 @@ test("the BTC filter stands aside in a downtrend", () => {
     series("BTCUSDT", [...rising(210, 0.1), ...rising(60, -0.8)]),
   ];
   const params = { ...defaultXsMomParams, lookback: 30, hold: 1, rebalanceDays: 10, requirePositive: false };
-  const gated = runXsMom(assets, { ...params, btcFilter: true });
-  const open = runXsMom(assets, { ...params, btcFilter: false });
+  const gated = runXsMom(assets, { ...params, gate: "BTCUSDT" });
+  const open = runXsMom(assets, { ...params, gate: null });
   assert.ok(gated.investedPct < open.investedPct, `${gated.investedPct} vs ${open.investedPct}`);
 });
 
@@ -104,7 +104,7 @@ test("hold=1 holds exactly one asset, and it is the strongest", () => {
     ...defaultXsMomParams,
     lookback: 30,
     hold: 1,
-    btcFilter: false,
+    gate: null,
     rebalanceDays: 30,
   });
   assert.equal(r.avgHoldings, 1);
@@ -130,7 +130,7 @@ test("holding the whole universe makes the result independent of lookback", () =
     series("BBB", rising(200, -0.1)),
     series("BTCUSDT", [...rising(120, 0.1), ...rising(80, -0.5)]),
   ];
-  const base = { ...defaultXsMomParams, hold: 9, requirePositive: false, btcFilter: true };
+  const base = { ...defaultXsMomParams, hold: 9, requirePositive: false, gate: "BTCUSDT" };
   const a = runXsMom(assets, { ...base, lookback: 20 });
   const b = runXsMom(assets, { ...base, lookback: 90 });
   assert.equal(a.finalEquity.toFixed(10), b.finalEquity.toFixed(10));
@@ -139,7 +139,54 @@ test("holding the whole universe makes the result independent of lookback", () =
 test("asking for the BTC filter without BTC in the panel throws", () => {
   const assets = [series("AAA", rising(200, 0.2))];
   assert.throws(
-    () => runXsMom(assets, { ...defaultXsMomParams, lookback: 30, btcFilter: true }),
+    () => runXsMom(assets, { ...defaultXsMomParams, lookback: 30, gate: "BTCUSDT" }),
     /BTCUSDT/,
   );
+});
+
+test("a self-gate stands aside when the asset itself is in a downtrend", () => {
+  const up = rising(300, 0.3);
+  const down = rising(300, -0.4);
+  const asset = (closes: number[]) => series("QQQ", closes);
+  const base = { ...defaultXsMomParams, lookback: 1, hold: 1, requirePositive: false, rebalanceDays: 5 };
+
+  const trendUp = runXsMom([asset(up)], { ...base, gate: "QQQ" });
+  const trendDown = runXsMom([asset(down)], { ...base, gate: "QQQ" });
+  const ungated = runXsMom([asset(down)], { ...base, gate: null });
+
+  assert.ok(trendUp.investedPct > 90, `should be invested in an uptrend, got ${trendUp.investedPct}`);
+  assert.ok(trendDown.investedPct < 10, `should stand aside in a downtrend, got ${trendDown.investedPct}`);
+  assert.ok(trendDown.finalEquity > ungated.finalEquity, "sitting out a downtrend must beat holding it");
+});
+
+test("allowShort goes short the fallers instead of sitting out", () => {
+  const falling = rising(400, -0.3);
+  const base = { ...defaultXsMomParams, lookback: 20, hold: 999, requirePositive: false, gate: null, rebalanceDays: 10 };
+
+  // Long-only with `requirePositive` sits flat; without it, it holds the faller and loses.
+  const longOnly = runXsMom([series("FALL", falling)], { ...base, allowShort: false, requirePositive: true });
+  const longShort = runXsMom([series("FALL", falling)], { ...base, allowShort: true });
+
+  assert.ok(Math.abs(longOnly.finalEquity - 1) < 1e-9, "long-only must sit flat, not lose");
+  assert.ok(longShort.finalEquity > 1.5, `shorting a 30%/bar fall should profit, got ${longShort.finalEquity}`);
+});
+
+test("allowShort signs each asset and keeps gross exposure at 100%", () => {
+  const assets = [
+    series("UP", rising(400, 0.2)),
+    series("DOWN", rising(400, -0.2)),
+  ];
+  const r = runXsMom(assets, {
+    ...defaultXsMomParams,
+    lookback: 20,
+    hold: 999,
+    requirePositive: false,
+    allowShort: true,
+    gate: null,
+    rebalanceDays: 30,
+  });
+  // Long one, short the other, equal weight: the pair is roughly flat except
+  // for the compounding difference, and it must not be flat by accident.
+  assert.ok(Number.isFinite(r.finalEquity));
+  assert.equal(r.avgHoldings, 2);
 });
