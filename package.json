@@ -1,0 +1,24 @@
+{
+  "name": "autopilot-trader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A zero-maintenance, zero-dependency crypto trading bot designed to run unattended on $10 forever.",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "tick": "node --env-file-if-exists=.env src/cli/tick.ts",
+    "backtest": "node --env-file-if-exists=.env src/cli/backtest.ts",
+    "status": "node --env-file-if-exists=.env src/cli/status.ts",
+    "lock": "node --env-file-if-exists=.env src/cli/halt.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts",
+    "verify": "npm run typecheck && npm test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.7.0"
+  }
+}

@@ -1,0 +1,225 @@
+/**
+ * Configuration.
+ *
+ * Every knob is an environment variable with a safe default, so the bot is
+ * fully operational with an empty environment (paper mode, $10, BTCUSDT,
+ * daily trend strategy). Nothing here throws at import time; `loadConfig`
+ * validates eagerly and loudly instead.
+ */
+
+import type { ExchangeId, Interval, Mode, StrategyName } from "./types.ts";
+
+export interface TrendParams {
+  /** EMA length on the daily chart. */
+  emaPeriod: number;
+  /** Buy only once price is this far above the EMA (fraction). */
+  entryBuffer: number;
+  /** Sell once price is this far below the EMA (fraction). */
+  exitBuffer: number;
+  /** Catastrophic stop: never let a single position lose more than this. */
+  crashStopPct: number;
+}
+
+export interface PullbackParams {
+  rsiPeriod: number;
+  oversold: number;
+  atrPeriod: number;
+  /** Minimum take-profit distance (fraction). */
+  tpPct: number;
+  tpAtrMult: number;
+  /** Minimum stop distance (fraction). */
+  slPct: number;
+  slAtrMult: number;
+  maxHoldHours: number;
+}
+
+export interface RiskParams {
+  positionFraction: number;
+  maxDrawdown: number;
+  maxDailyLoss: number;
+  maxConsecutiveLosses: number;
+  haltDays: number;
+  cooldownHours: number;
+}
+
+export interface BotConfig {
+  mode: Mode;
+  strategy: StrategyName;
+  exchangeId: ExchangeId;
+  symbol: string;
+  interval: Interval;
+  candleLimit: number;
+
+  exchange: {
+    baseUrl: string;
+    apiKey: string;
+    apiSecret: string;
+  };
+
+  /** Taker fee per side used by the paper simulator. */
+  feeRate: number;
+  /** Extra adverse bps applied to paper fills so results are not flattering. */
+  slippageBps: number;
+
+  risk: RiskParams;
+  trend: TrendParams;
+  pullback: PullbackParams;
+
+  store: {
+    supabaseUrl: string;
+    serviceRoleKey: string;
+  };
+
+  notifications: {
+    telegramToken: string;
+    telegramChatId: string;
+  };
+
+  security: {
+    cronSecret: string;
+    dashboardToken: string;
+  };
+
+  killSwitch: boolean;
+  initialPaperUsdt: number;
+  /** Symbol the tick lock is scoped to (defaults to symbol). */
+  logLevel: "debug" | "info" | "warn" | "error";
+}
+
+export type Env = Record<string, string | undefined>;
+
+function num(env: Env, key: string, fallback: number): number {
+  const raw = env[key];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) throw new Error(`env ${key} must be a number, got "${raw}"`);
+  return n;
+}
+
+function bool(env: Env, key: string, fallback: boolean): boolean {
+  const raw = env[key];
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const v = raw.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(v)) return true;
+  if (["0", "false", "no", "off"].includes(v)) return false;
+  throw new Error(`env ${key} must be a boolean, got "${raw}"`);
+}
+
+function str(env: Env, key: string, fallback = ""): string {
+  const raw = env[key];
+  return raw === undefined ? fallback : raw.trim();
+}
+
+function oneOf<T extends string>(env: Env, key: string, allowed: readonly T[], fallback: T): T {
+  const raw = str(env, key).toLowerCase();
+  if (!raw) return fallback;
+  if (!(allowed as readonly string[]).includes(raw)) {
+    throw new Error(`env ${key} must be one of ${allowed.join("|")}, got "${raw}"`);
+  }
+  return raw as T;
+}
+
+export function loadConfig(env: Env = process.env): BotConfig {
+  const mode = oneOf(env, "BOT_MODE", ["paper", "live"] as const, "paper");
+  const strategy = oneOf(env, "STRATEGY", ["trend", "pullback"] as const, "trend");
+
+  const cfg: BotConfig = {
+    mode,
+    strategy,
+    exchangeId: "binance",
+    symbol: str(env, "SYMBOL", "BTCUSDT").toUpperCase(),
+    interval: strategy === "trend" ? "1d" : "1h",
+    candleLimit: 1000,
+
+    exchange: {
+      baseUrl: str(env, "BINANCE_BASE_URL", "https://api.binance.com").replace(/\/+$/, ""),
+      apiKey: str(env, "BINANCE_API_KEY"),
+      apiSecret: str(env, "BINANCE_API_SECRET"),
+    },
+
+    feeRate: num(env, "FEE_RATE", 0.001),
+    slippageBps: num(env, "SLIPPAGE_BPS", 2),
+
+    risk: {
+      positionFraction: num(env, "POSITION_FRACTION", 0.97),
+      maxDrawdown: num(env, "MAX_DRAWDOWN", 0.3),
+      maxDailyLoss: num(env, "MAX_DAILY_LOSS", 0.08),
+      maxConsecutiveLosses: num(env, "MAX_CONSECUTIVE_LOSSES", 5),
+      haltDays: num(env, "HALT_DAYS", 7),
+      cooldownHours: num(env, "COOLDOWN_HOURS", 4),
+    },
+
+    trend: {
+      emaPeriod: num(env, "TREND_EMA_PERIOD", 200),
+      entryBuffer: num(env, "TREND_ENTRY_BUFFER", 0.005),
+      exitBuffer: num(env, "TREND_EXIT_BUFFER", 0.005),
+      crashStopPct: num(env, "TREND_CRASH_STOP", 0.25),
+    },
+
+    pullback: {
+      rsiPeriod: num(env, "PULLBACK_RSI_PERIOD", 14),
+      oversold: num(env, "PULLBACK_OVERSOLD", 30),
+      atrPeriod: num(env, "PULLBACK_ATR_PERIOD", 14),
+      tpPct: num(env, "PULLBACK_TP_PCT", 0.02),
+      tpAtrMult: num(env, "PULLBACK_TP_ATR_MULT", 1.0),
+      slPct: num(env, "PULLBACK_SL_PCT", 0.03),
+      slAtrMult: num(env, "PULLBACK_SL_ATR_MULT", 1.5),
+      maxHoldHours: num(env, "PULLBACK_MAX_HOLD_HOURS", 72),
+    },
+
+    store: {
+      supabaseUrl: str(env, "SUPABASE_URL").replace(/\/+$/, ""),
+      serviceRoleKey: str(env, "SUPABASE_SERVICE_ROLE_KEY"),
+    },
+
+    notifications: {
+      telegramToken: str(env, "TELEGRAM_BOT_TOKEN"),
+      telegramChatId: str(env, "TELEGRAM_CHAT_ID"),
+    },
+
+    security: {
+      cronSecret: str(env, "CRON_SECRET"),
+      dashboardToken: str(env, "DASHBOARD_TOKEN"),
+    },
+
+    killSwitch: bool(env, "KILL_SWITCH", false),
+    initialPaperUsdt: num(env, "PAPER_START_USDT", 10),
+    logLevel: oneOf(env, "LOG_LEVEL", ["debug", "info", "warn", "error"] as const, "info"),
+  };
+
+  validate(cfg);
+  return cfg;
+}
+
+export function validate(cfg: BotConfig): void {
+  if (!(cfg.risk.positionFraction > 0 && cfg.risk.positionFraction <= 1)) {
+    throw new Error("risk.positionFraction must be in (0, 1]");
+  }
+  if (!(cfg.risk.maxDrawdown > 0 && cfg.risk.maxDrawdown < 1)) {
+    throw new Error("risk.maxDrawdown must be in (0, 1)");
+  }
+  if (!(cfg.risk.maxDailyLoss > 0 && cfg.risk.maxDailyLoss < 1)) {
+    throw new Error("risk.maxDailyLoss must be in (0, 1)");
+  }
+  if (cfg.trend.emaPeriod < 20) throw new Error("trend.emaPeriod must be >= 20");
+  if (cfg.pullback.rsiPeriod < 2) throw new Error("pullback.rsiPeriod must be >= 2");
+  if (cfg.feeRate < 0 || cfg.feeRate > 0.01) throw new Error("feeRate looks wrong (expected 0..0.01)");
+
+  if (cfg.mode === "live") {
+    if (!cfg.exchange.apiKey || !cfg.exchange.apiSecret) {
+      throw new Error("BOT_MODE=live requires BINANCE_API_KEY and BINANCE_API_SECRET");
+    }
+  }
+  if (!cfg.store.supabaseUrl || !cfg.store.serviceRoleKey) {
+    // Not fatal — MemoryStore is used — but the caller should know.
+    // Emitting here would require a logger dependency, so the CLI warns instead.
+  }
+}
+
+export function hasStore(cfg: BotConfig): boolean {
+  return Boolean(cfg.store.supabaseUrl && cfg.store.serviceRoleKey);
+}
+
+export function hasTelegram(cfg: BotConfig): boolean {
+  return Boolean(cfg.notifications.telegramToken && cfg.notifications.telegramChatId);
+}
