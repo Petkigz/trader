@@ -22,7 +22,8 @@
     "challenger": "node --experimental-strip-types scripts/challenger.ts",
     "catchup": "node --experimental-strip-types scripts/catchup.ts",
     "recover": "node --experimental-strip-types scripts/recover.ts",
-    "growth": "node --experimental-strip-types scripts/growth.ts"
+    "growth": "node --experimental-strip-types scripts/growth.ts",
+    "context": "node --experimental-strip-types scripts/context.ts"
   },
   "dependencies": {},
   "devDependencies": {

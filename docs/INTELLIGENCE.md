@@ -54,6 +54,53 @@ looks like a *new* formula edge is, by definition, something the market has not 
 the moment it is published and adopted it stops working. A bot that chases the latest formula
 is chasing the part of the field that decays fastest.
 
+## 2a. What it could know and does not
+
+The strategy reads one symbol's closes. Everything else that is knowable in advance is currently
+invisible to it. [`context.ts`](../src/market/context.ts) computes five of those things, so they can
+be measured rather than argued about:
+
+```bash
+npm run context -- --dir=data/real
+```
+
+| What | Value on the panel | Verdict |
+|---|---|---|
+| Median beta to BTC | **1.18** (0.0 to 1.5) | Real. These are not independent bets. |
+| Median correlation | **0.69** | Real. |
+| Mean day when the market is above its long average | **+0.436%** | Real, and large. |
+| Mean day when the market is below it | **−0.372%** | Real, and large. |
+| Daily range / round-trip cost | **25×** | The move dwarfs the friction; a cost gate has almost nothing to do. |
+| Symbol and market trends agree | **72% of days** | **This is the finding.** |
+
+That last line is why market awareness, however real, adds so little. The bot already requires the
+symbol to be above its own 200-day average before it buys; the symbol agrees with the market 72% of
+the time; and the exit fires on the symbol. So a "don't buy when BTC is below its average" rule is
+mostly re-testing something the entry rule already tested.
+
+Measured as a gate, on the same terms as a challenger (months from 2024-01-01, block bootstrap over
+the panel, bar for three attempts):
+
+| Gate | Entries blocked | OOS edge/mo | Verdict |
+|---|---|---|---|
+| market (buy only when the market is above its average) | 66 | +0.012% | inside the luck bar |
+| volume (skip entries on collapsing flow) | 0 | — | **untested: the offline panel has no volume column** |
+| cost (skip entries whose range is under 10× friction) | 5 | −0.039% | **actively harmful** — the entries it blocks are the high-volatility ones that pay |
+
+None of them is switched on. The gates exist in `src/market/gates.ts`, are exercised by the test
+suite, and can only ever *refuse* an entry — but they stay out of the trading path until one of them
+clears its bar, because "the bot should know this" and "this makes the bot better" are different
+claims and only the second one is allowed to touch money.
+
+Two honest caveats:
+
+- **The volume gate is untested, not rejected.** The offline CSVs carry no volume column, so the
+  backtester has never seen flow. It is a real gap: testing it needs a panel fetched with volume.
+  The script now reports it as UNTESTED rather than printing a zero that looks like a result.
+- **72% agreement is not 100%.** The remaining 28% of days are exactly where a market filter would
+  act, and on this panel they were not worth enough to clear the bar. That could change with a
+  different rule — which is what the pre-registered machinery is for.
+
 ## 3. What it does instead: it lets you search, honestly
 
 Refusing to self-optimise does not mean refusing to learn. It means the learning happens

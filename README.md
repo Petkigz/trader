@@ -548,6 +548,18 @@ a test enforces it. The experiment that justifies that rule is in
 [`docs/GOAL.md`](docs/GOAL.md): sizing up to recover a deficit left the median unchanged and
 quadrupled the number of ruined accounts.
 
+### What it cannot currently see
+
+```bash
+npm run context -- --dir=data/real
+```
+
+Beta to BTC (1.18), correlation (0.69), and the spread between up-market and down-market days
+(+0.44% vs −0.37%) are all real, and all invisible to a bot that reads one symbol. Measured as
+trading filters they fail: the symbol's trend already agrees with the market 72% of the time, so a
+market gate re-tests what the entry rule knows. Volume is untested — the offline panel has no volume
+column. See [`docs/INTELLIGENCE.md`](docs/INTELLIGENCE.md) §2a.
+
 ### Learning, if it is ever allowed to happen
 
 ```bash

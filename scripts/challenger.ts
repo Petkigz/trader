@@ -22,6 +22,7 @@ import {
   type ChallengerSpec,
   type RegistryEntry,
 } from "../src/research/challengers.ts";
+import { monthlyDiffPanel } from "../src/research/panel.ts";
 import { blockBootstrap, mean } from "../src/research/stats.ts";
 import type { Candle, StrategyName } from "../src/types.ts";
 
@@ -137,25 +138,6 @@ function runOn(
  * excess return because it is additive and therefore bootstrappable; it is
  * annualised (×12) only for display.
  */
-function monthlyDiffPanel(
-  challenger: Array<{ symbol: string; monthly: Map<string, number> }>,
-  champion: Array<{ symbol: string; monthly: Map<string, number> }>,
-): number[][] {
-  const months = new Set<string>();
-  for (const r of champion) for (const k of r.monthly.keys()) months.add(k);
-  const rows: number[][] = [];
-  for (const month of [...months].sort()) {
-    const cells: number[] = [];
-    for (let i = 0; i < challenger.length; i++) {
-      const a = challenger[i].monthly.get(month);
-      const b = champion[i].monthly.get(month);
-      if (a !== undefined && b !== undefined) cells.push(a - b);
-    }
-    if (cells.length > 0) rows.push(cells);
-  }
-  return rows;
-}
-
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const get = (n: string): string | undefined => {
