@@ -73,3 +73,32 @@ test("GOAL_MONTHLY_TARGET wins over the daily target and is validated", async ()
 
   assert.throws(() => loadConfig({ GOAL_MONTHLY_TARGET: "-5" }), /GOAL_MONTHLY_TARGET/);
 });
+
+test("an impossible target is allowed in paper and refused in live", async () => {
+  const { loadConfig, MAX_PLAUSIBLE_DAILY_RATE } = await import("../src/config.ts");
+
+  // Paper: allowed, because watching it fail is the point.
+  const paper = loadConfig({ GOAL_DAILY_RATE: "0.05" });
+  assert.equal(paper.goalDailyRate, 0.05);
+  assert.equal(paper.mode, "paper");
+
+  // The rail: 0.5%/day (~250%/yr) is the ceiling for real money.
+  assert.equal(MAX_PLAUSIBLE_DAILY_RATE, 0.005);
+  const live = { BOT_MODE: "live", BINANCE_API_KEY: "k", BINANCE_API_SECRET: "s", CRON_SECRET: "x" };
+  assert.throws(() => loadConfig({ ...live, GOAL_DAILY_RATE: "0.05" }), /far beyond any measured edge/);
+  assert.throws(() => loadConfig({ ...live, GOAL_DAILY_RATE: "0.05" }), /ALLOW_UNREACHABLE_TARGET/);
+
+  // Override exists, and is explicit.
+  const overridden = loadConfig({ ...live, GOAL_DAILY_RATE: "0.05", ALLOW_UNREACHABLE_TARGET: "true" });
+  assert.equal(overridden.goalDailyRate, 0.05);
+
+  // A plausible rate does not need the override.
+  const sane = loadConfig({ ...live, GOAL_DAILY_RATE: "0.001" });
+  assert.equal(sane.goalDailyRate, 0.001);
+});
+
+test("a rate of 100% a day or more is rejected outright", async () => {
+  const { loadConfig } = await import("../src/config.ts");
+  assert.throws(() => loadConfig({ GOAL_DAILY_RATE: "1" }), /fraction below 1/);
+  assert.throws(() => loadConfig({ GOAL_DAILY_RATE: "-0.01" }), /fraction below 1/);
+});

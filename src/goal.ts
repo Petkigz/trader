@@ -25,7 +25,7 @@
  * measures how fast.
  */
 
-import { DAY_MS } from "./util/num.ts";
+import { DAY_MS, formatPercent } from "./util/num.ts";
 
 export interface GoalConfig {
   /** Equity the goal line was anchored on. */
@@ -74,6 +74,10 @@ export interface GoalStatus {
   /** Years to reach the threshold at the achieved rate. Null if never. */
   yearsToEscapeVelocity: number | null;
   pressure: Pressure;
+  /** Set when the goal is proportional (e.g. 5%/day) rather than a dollar amount. */
+  dailyRate: number | null;
+  /** The rate target as a yearly return, for comparison with measured edges. */
+  rateAnnualised: number | null;
   /** Plain-language read on the arithmetic, for the dashboard. */
   verdict: string;
 }
@@ -98,7 +102,15 @@ export function goalStatus(
   const start = utcMidnight(cfg.startDate);
   const today = utcMidnight(now);
   const daysElapsed = Math.max(0, Math.round((today - start) / DAY_MS));
-  const targetEquity = cfg.startEquity + cfg.dailyTarget * daysElapsed;
+
+  // A proportional target compounds off the anchor; a dollar target does not.
+  // Both are supported because they answer different questions: "$1 a day" is a
+  // promise about time, "5% a day" is a promise about returns — and the second
+  // one is only meaningful as a ratio.
+  const rateTarget = (cfg.dailyRate ?? 0) > 0;
+  const targetEquity = rateTarget
+    ? cfg.startEquity * Math.pow(1 + (cfg.dailyRate ?? 0), daysElapsed)
+    : cfg.startEquity + cfg.dailyTarget * daysElapsed;
 
   const eq = Number.isFinite(equity) ? equity : 0;
   const deficit = Math.max(0, targetEquity - eq);
@@ -117,6 +129,7 @@ export function goalStatus(
     deficit > 0 && achievedPerDay > 0 ? deficit / achievedPerDay : deficit > 0 ? null : 0;
 
   const pressure = classify(deficit, surplus, eq, requiredDailyReturn30d);
+  const rateAnnualised = rateTarget ? Math.pow(1 + (cfg.dailyRate ?? 0), 365.25) - 1 : null;
 
   // The threshold that decides whether a *dollar* target can ever be caught up:
   // growth per day is equity × r, so the line only stops outrunning you once
@@ -146,6 +159,10 @@ export function goalStatus(
     aboveEscapeVelocity: aboveEscape,
     yearsToEscapeVelocity: yearsToEscape,
     pressure,
+    /** Set when the goal is proportional rather than a dollar amount. */
+    dailyRate: rateTarget ? (cfg.dailyRate ?? 0) : null,
+    /** The rate target expressed as a yearly return, for comparison. */
+    rateAnnualised,
     verdict: explain({
       pressure,
       deficit,
@@ -158,6 +175,8 @@ export function goalStatus(
       aboveEscape,
       yearsToEscape,
       dailyTarget: cfg.dailyTarget,
+      dailyRate: rateTarget ? (cfg.dailyRate ?? 0) : null,
+      rateAnnualised,
     }),
   };
 }
@@ -200,12 +219,32 @@ function explain(ctx: {
   daysElapsed: number;
   escape: number;
   aboveEscape: boolean;
+  dailyRate?: number | null;
+  rateAnnualised?: number | null;
   yearsToEscape: number | null;
   dailyTarget: number;
 }): string {
   const money = (x: number) => `$${x.toFixed(2)}`;
   if (ctx.pressure === "ahead") return "ahead of the line — nothing to catch up";
   if (ctx.equity <= 0) return "no equity left; the goal line is moot";
+
+  // A proportional target is a claim about returns, so it is answered in those
+  // terms rather than in dollars: the only question is whether the rate exists.
+  if (ctx.dailyRate !== null && ctx.dailyRate !== undefined && ctx.dailyRate > 0) {
+    const annual = ctx.rateAnnualised ?? Math.pow(1 + ctx.dailyRate, 365.25) - 1;
+    if (ctx.deficit > 0) {
+      return (
+        `target is ${(ctx.dailyRate * 100).toFixed(2)}%/day — ${formatPercent(annual * 100)}/yr compounded — and the ` +
+        `account is ${money(ctx.deficit)} behind it. No measured edge reaches that rate ` +
+        `(this repo's best is 30%/yr), so the line runs away by design: this is a test harness. ` +
+        `Capital is what closes it, not risk.`
+      );
+    }
+    return (
+      `ahead of a ${(ctx.dailyRate * 100).toFixed(2)}%/day line (${formatPercent(annual * 100)}/yr compounded) — ` +
+      `a rate no strategy here has ever sustained`
+    );
+  }
 
   // "The gap is growing" is more useful news than "the target is unreachable",
   // and is usually the reason it is.

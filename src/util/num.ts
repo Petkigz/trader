@@ -52,3 +52,18 @@ export const MINUTE_MS = 60_000;
 export function isFinitePositive(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n > 0;
 }
+
+/**
+ * Percentages in this repo range from 0.0037% to billions of percent. A number
+ * that large stops being information, so it gets words once it passes a million.
+ */
+export function formatPercent(x: number): string {
+  if (!Number.isFinite(x)) return "—";
+  const abs = Math.abs(x);
+  const sign = x < 0 ? "-" : "";
+  if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(1)} billion%`;
+  if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(1)} million%`;
+  if (abs >= 1e4) return `${sign}${Math.round(abs).toLocaleString()}%`;
+  if (abs >= 10) return `${sign}${abs.toFixed(0)}%`;
+  return `${sign}${abs.toFixed(2)}%`;
+}

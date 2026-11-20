@@ -321,6 +321,12 @@
           const today = g.lastDayPnl === null ? `${nf(g.dailyTarget)}/day target` : `today ${signed(g.lastDayPnl)}`;
           $("goalFoot").textContent =
             a.dollarsToRegainPeak > 0.01 ? `${today} · ${nf(a.dollarsToRegainPeak)} to regain peak` : today;
+          if (g.dailyRate) {
+            $("goalFoot").textContent =
+              `${(g.dailyRate * 100).toFixed(1)}%/day target · ${short ? "behind " + nf(g.deficit) : "ahead"}`;
+            $("goalFoot").title = g.verdict;
+            $("goal").title = g.verdict;
+          }
           if (g.target) {
             const t = g.target;
             const row = t.rows.find(r => r.label.includes("23.3")) || t.rows[0];

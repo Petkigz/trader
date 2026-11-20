@@ -120,6 +120,20 @@ Read as a *rate*, the target at small capital is not demanding, it is arithmetic
 | $3,636 | 99%/yr | 1.7× — needs its best year, every year |
 | $12,180 | 30%/yr | within the measured range |
 
+### Testing the unachievable, safely
+
+The bot will happily *report against* a target no strategy can meet — that is a legitimate thing to watch. Set it as a rate, not a dollar amount:
+
+```bash
+GOAL_DAILY_RATE=0.05        # 5% a day
+```
+
+`/api/status` and the dashboard then track a line that compounds at 5% per day, so it is $43.22 on a $10 account after 30 days, $2.2 million after a year, and the deficit grows forever — by design, not by bad luck. The verdict says so in plain words:
+
+> target is 5.00%/day — 5.5 billion%/yr compounded — and the account is $6.29 behind it. No measured edge reaches that rate (this repo's best is 30%/yr), so the line runs away by design: this is a test harness. Capital is what closes it, not risk.
+
+**Two things the bot will not do with it.** It will not size a position from the deficit — nothing on the trading path imports the goal ledger, and a test enforces that. And **live mode refuses a target above 0.5%/day** (~250%/yr) unless `ALLOW_UNREACHABLE_TARGET=true`, because real money traded against a promise with no mechanism behind it is how accounts end. Paper mode has no such restriction: watching it fail is the point.
+
 ### If the request is "10% a day"
 
 ```bash

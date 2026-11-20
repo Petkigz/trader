@@ -406,3 +406,35 @@ test("the target is report-only: nothing on the trading path can see it", async 
   assert.ok(poor.rows[0].progressPct < 1);
   assert.ok(!("riskMultiplier" in poor), "the plan must not carry a sizing field");
 });
+
+test("a proportional target compounds off the anchor, so it runs away by design", async () => {
+  const { goalStatus } = await import("../src/goal.ts");
+  const start = Date.UTC(2026, 0, 1);
+  const day = (n: number) => start + n * 86_400_000;
+
+  const cfg = { startEquity: 10, startDate: start, dailyTarget: 0, dailyRate: 0.05 };
+  // 5%/day for 30 days is 1.05^30 = 4.32x the anchor: $43.22, not $10 + something.
+  const after30 = goalStatus(cfg, 10, day(30));
+  assert.ok(Math.abs(after30.targetEquity - 43.22) < 0.01, `got ${after30.targetEquity}`);
+  assert.equal(after30.dailyRate, 0.05);
+  assert.ok(after30.rateAnnualised !== null && after30.rateAnnualised > 1e6);
+
+  // A dollar target does not compound — that difference is the whole point.
+  const flat = goalStatus({ startEquity: 10, startDate: start, dailyTarget: 0.5 }, 10, day(30));
+  assert.ok(Math.abs(flat.targetEquity - 25) < 0.01, `got ${flat.targetEquity}`);
+  assert.equal(flat.dailyRate, null);
+});
+
+test("the verdict names the rate as fiction rather than scolding the account", async () => {
+  const { goalStatus } = await import("../src/goal.ts");
+  const start = Date.UTC(2026, 0, 1);
+  const status = goalStatus(
+    { startEquity: 10, startDate: start, dailyTarget: 0, dailyRate: 0.05 },
+    10,
+    start + 10 * 86_400_000,
+  );
+  assert.match(status.verdict, /5\.00%\/day/);
+  assert.match(status.verdict, /billion%\/yr/);
+  assert.match(status.verdict, /test harness/);
+  assert.match(status.verdict, /Capital is what closes it, not risk/);
+});

@@ -8,6 +8,7 @@
  */
 
 import type { ExchangeId, Interval, Mode, StrategyName } from "./types.ts";
+import { formatPercent } from "./util/num.ts";
 
 export interface TrendParams {
   /** EMA length on the daily chart. */
@@ -144,6 +145,11 @@ export interface BotConfig {
   goalDailyTarget: number;
   /** Monthly income target in USDT, 0 when unset. Overrides `goalDailyTarget`. */
   goalMonthlyTarget: number;
+  /**
+   * Proportional target, 0.05 = "5% a day". Overrides both of the above, and is
+   * the only way to express a target as a rate rather than a dollar figure.
+   */
+  goalDailyRate: number;
   /** Symbol the tick lock is scoped to (defaults to symbol). */
   logLevel: "debug" | "info" | "warn" | "error";
 }
@@ -181,10 +187,23 @@ function oneOf<T extends string>(env: Env, key: string, allowed: readonly T[], f
   return raw as T;
 }
 
+/**
+ * The ceiling above which a target stops being ambitious and becomes fictional:
+ * 0.5%/day is ~250%/yr. Everything in this repo measures below 31%/yr, and the
+ * best long-run fund in history is ~66%/yr.
+ */
+export const MAX_PLAUSIBLE_DAILY_RATE = 0.005;
+
 export function loadConfig(env: Env = process.env): BotConfig {
   const mode = oneOf(env, "BOT_MODE", ["paper", "live"] as const, "paper");
   /** Monthly income target, 0 when unset. GOAL_DAILY_TARGET is the fallback. */
   const goalMonthly = num(env, "GOAL_MONTHLY_TARGET", 0);
+  /**
+   * Proportional target, e.g. 0.05 for "5% a day". Highest precedence: it is the
+   * only form in which a rate like 5%/day can be stated, since as a dollar
+   * target it would depend on the balance it is measured against.
+   */
+  const goalDailyRate = num(env, "GOAL_DAILY_RATE", 0);
   const strategy = oneOf(env, "STRATEGY", ["trend", "pullback", "meanrev", "ensemble"] as const, "trend");
 
   const cfg: BotConfig = {
@@ -283,11 +302,30 @@ export function loadConfig(env: Env = process.env): BotConfig {
      * silently converting it to a different daily number is how targets drift.
      */
     goalMonthlyTarget: goalMonthly,
+    goalDailyRate,
     logLevel: oneOf(env, "LOG_LEVEL", ["debug", "info", "warn", "error"] as const, "info"),
   };
 
   if (cfg.goalMonthlyTarget < 0) {
     throw new Error("env GOAL_MONTHLY_TARGET must be zero (unset) or positive");
+  }
+  if (!(cfg.goalDailyRate >= 0) || cfg.goalDailyRate >= 1) {
+    throw new Error("env GOAL_DAILY_RATE must be zero (unset) or a fraction below 1, e.g. 0.05 for 5%/day");
+  }
+  // The target is reported, never traded — so an impossible one is allowed in
+  // paper mode, where its whole purpose is to be watched failing. In live mode
+  // it is a promise about money that has no mechanism behind it, and the honest
+  // response is to refuse until the operator says they know.
+  if (
+    cfg.mode === "live" &&
+    cfg.goalDailyRate > MAX_PLAUSIBLE_DAILY_RATE &&
+    !bool(env, "ALLOW_UNREACHABLE_TARGET", false)
+  ) {
+    throw new Error(
+      `GOAL_DAILY_RATE=${cfg.goalDailyRate} is ${formatPercent((Math.pow(1 + cfg.goalDailyRate, 365.25) - 1) * 100)}/yr compounded, ` +
+        `far beyond any measured edge (30%/yr best). Live mode refuses to run real money against it. ` +
+        `Set ALLOW_UNREACHABLE_TARGET=true to override, or run BOT_MODE=paper to test it safely.`,
+    );
   }
   validate(cfg);
   return cfg;

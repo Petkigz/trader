@@ -84,6 +84,10 @@ export interface StatusSnapshot {
     lastDayPnl: number | null;
     achievedPerDay: number;
     pressure: Pressure;
+    /** Set when the target is proportional, e.g. 0.05 for 5%/day. */
+    dailyRate: number | null;
+    /** That rate as a yearly return. */
+    rateAnnualised: number | null;
     verdict: string;
     /** What the monthly income target costs in capital, at each measured rate. */
     target: TargetPlan;
@@ -128,7 +132,12 @@ function buildGoal(
 ): StatusSnapshot["goal"] {
   const startDate = curve.length > 0 ? curve[0].ts : now;
   const status = goalStatus(
-    { startEquity: cfg.initialPaperUsdt, startDate, dailyTarget: cfg.goalDailyTarget },
+    {
+      startEquity: cfg.initialPaperUsdt,
+      startDate,
+      dailyTarget: cfg.goalDailyTarget,
+      dailyRate: cfg.goalDailyRate > 0 ? cfg.goalDailyRate : undefined,
+    },
     equity,
     now,
   );
@@ -146,6 +155,8 @@ function buildGoal(
     achievedPerDay: round(status.achievedPerDay, 4),
     pressure: status.pressure,
     verdict: status.verdict,
+    dailyRate: status.dailyRate,
+    rateAnnualised: status.rateAnnualised === null ? null : round(status.rateAnnualised, 4),
     target: roundPlan(targetPlan({ monthlyTarget, equity, achievedCagr: status.achievedCagr })),
     entriesBlockedByGoal: false,
   };

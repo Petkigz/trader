@@ -105,6 +105,8 @@ export function buildDemoSnapshot(cfg: BotConfig, now = Date.now()): StatusSnaps
       achievedPerDay: 0,
       pressure: "ahead",
       verdict: "demo data — the goal ledger is not simulated",
+      dailyRate: cfg.goalDailyRate > 0 ? cfg.goalDailyRate : null,
+      rateAnnualised: cfg.goalDailyRate > 0 ? Math.pow(1 + cfg.goalDailyRate, 365.25) - 1 : null,
       target: targetPlan({
         monthlyTarget: cfg.goalMonthlyTarget > 0 ? cfg.goalMonthlyTarget : cfg.goalDailyTarget * 30,
         equity,
