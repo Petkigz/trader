@@ -162,6 +162,52 @@ The one route that could legitimately unlock a learned model is **pooling across
 then applying the model to BTC. That is real statistics rather than numerology, and it is the
 only version of "learned intelligence" worth attempting in this repo.
 
+## 4b. How much confidence each claim deserves
+
+Asked directly: *am I confident in its intelligence?* **No.** Not "mostly, with caveats" — the
+adaptive layers have not earned confidence, and the reason is structural rather than a missing
+feature. Here is the graded ledger, so the word "intelligence" is not doing unpaid work.
+
+| Claim | Confidence | Why |
+|---|---|---|
+| Runs unattended for months | **High** | Stateless ticks, atomic locking, reconciliation, 120 passing tests |
+| Caps worst drawdown vs holding | **Moderate** | −61% vs −77% over 8.3 years; downgraded because n = 1 asset |
+| Adaptive sizing improves risk-adjusted return | **Low** | Cuts drawdown 61% → 53% and return 784% → 478%: de-risking, not edge |
+| Beats buy-and-hold | **Low** | +784% vs +767%, i.e. a tie on return, on one asset, one span |
+| Ensemble selection adds intelligence | **No** | +0.02 mean Sharpe, t ≈ 0.7; the winning window changes with the sample |
+| High-frequency trading is unviable at $10 | **High** (this is a *negative* result) | 39% of the account lost to fees in the measured churn |
+
+Two arithmetic reasons the upper rows can't rise on this evidence:
+
+**The decisions are too few to prove anything.** 33 round trips in 8.3 years is 4 decisions a
+year. For a single predictor at n = 33, the smallest effect that is statistically provable is
+R² ≈ **9.6%**. Real market predictors explain 0.1–1%. So a genuine edge would be sitting an
+order of magnitude below the noise floor — I could not detect it even if it were there, and I
+also cannot rule it out. That is what "not confident" means here: not *wrong*, **unfalsifiable**.
+
+**The six spans are not six experiments.** They are nested subsets of one price series sharing
+the same final bar, so they are almost perfectly correlated. Four Sharpe wins out of six has a
+sign-test p of **0.34** — a coin flip with better marketing. Drawdown improving 6/6 would be
+p = 0.016 *if* the spans were independent; they are not, so it stays at "suggestive".
+
+What I *am* confident in is the negative work, because negative results don't need a large
+sample to be real: the union-of-exits churn, the fee floor, the temperature knob that could not
+switch anything, `meanrev` losing in all six spans, and the parameter that changed its optimum
+when the data changed. Those are mechanical facts, and they are where most of this system's
+actual value has come from.
+
+What would move the second column, in order:
+
+1. **~30 assets.** Same code, same rules, scored per asset. That converts n = 1 into n ≈ 30
+   weakly-correlated samples and is the only change that can turn t ≈ 0.7 into an answer.
+2. **Years, not spans.** Out-of-sample forward paper trading, which the harness already
+   supports but which no backtest can substitute for.
+3. **A second family that doesn't lose money.** Right now selection is a choice between a
+   winner and a loser, so the best it can do is reduce exposure.
+
+Until then the honest description is: **a well-built, risk-controlled trend follower with four
+opinions a year, wearing a more sophisticated harness than its evidence supports.**
+
 ## 5. Where the multi-venue idea actually stands
 
 The `Exchange` interface means a new venue is one adapter and nothing else in the engine
