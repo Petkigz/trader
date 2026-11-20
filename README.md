@@ -120,6 +120,25 @@ Read as a *rate*, the target at small capital is not demanding, it is arithmetic
 | $3,636 | 99%/yr | 1.7× — needs its best year, every year |
 | $12,180 | 30%/yr | within the measured range |
 
+### What a given capital makes
+
+```bash
+npm run income                   # $100
+npm run income -- --capital=10
+```
+
+Income is linear in capital at a fixed rate, so this is arithmetic — the argument is the *rate*:
+
+| $100 of capital | Per day | Per week | Per month | Per year |
+|---|---|---|---|---|
+| **9.9%/yr** (realised) | $0.027 | $0.190 | $0.83 | **$9.90** |
+| 23.3%/yr (backtest) | $0.064 | $0.45 | $1.94 | $23.30 |
+| 30.0%/yr (best re-measurement) | $0.082 | $0.58 | $2.50 | $30.00 |
+
+So **$100 makes about $10 a year**, and `npm run catchup` confirms it end to end: the same rule on $100 with 50% deployed finished at a median of **$185.00** after 6.3 years — 1.85×, 10.1%/yr.
+
+Against that $0.83/month: an ordinary in-market day moves **±$2.30** on $100. Two months of average income, up or down, in a single day.
+
 ### When does it pay? The compounding schedule
 
 ```bash
