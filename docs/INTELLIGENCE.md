@@ -151,8 +151,8 @@ Ranked by what can honestly be built:
 |---|---|---|
 | Risk and execution discipline | yes — mechanically | built |
 | Adaptive exposure (vol targeting) | yes — measurable | built, [`ADAPTIVE.md`](ADAPTIVE.md) |
-| Regime switching between strategy families | partly — few independent regimes | buildable |
-| Online ensemble weighting of sub-strategies | partly — allocation adapts without fitting a signal | buildable |
+| Regime switching between strategy families | partly — few independent regimes | **built**, [`ENSEMBLE.md`](ENSEMBLE.md) |
+| Online ensemble weighting of sub-strategies | partly — allocation adapts without fitting a signal | **built**, [`ENSEMBLE.md`](ENSEMBLE.md) |
 | Learned signal model / meta-labelling | **no** — 40 events | would be unfalsifiable |
 | LLM-in-the-loop sentiment | **no** — not backtestable, unproven at daily horizon | possible, not advisable |
 | Self-rewriting strategy logic | **no** — see §2 | refused |

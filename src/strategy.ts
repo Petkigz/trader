@@ -15,6 +15,8 @@
 import type { BotConfig } from "./config.ts";
 import type { Candle, Decision, Position } from "./types.ts";
 import { atr, ema, lastValid, rsi } from "./util/indicators.ts";
+import { evalMeanRev } from "./strategy/meanrev.ts";
+import { evalEnsemble, registerTrendEvaluator } from "./strategy/ensemble.ts";
 
 export interface StrategyInput {
   /** Closed daily candles, oldest first. */
@@ -29,8 +31,21 @@ export interface StrategyInput {
 }
 
 export function evaluate(input: StrategyInput): Decision {
-  return input.cfg.strategy === "pullback" ? evalPullback(input) : evalTrend(input);
+  switch (input.cfg.strategy) {
+    case "pullback":
+      return evalPullback(input);
+    case "meanrev":
+      return evalMeanRev(input);
+    case "ensemble":
+      return evalEnsemble(input);
+    default:
+      return evalTrend(input);
+  }
 }
+
+// The ensemble delegates entries to the trend family, so it needs a handle on
+// it. Registering here keeps the dependency one-directional and cycle-free.
+registerTrendEvaluator(evalTrend);
 
 /* ------------------------------------------------------------------------- */
 /* Trend: be long while the daily close is above a long EMA, otherwise cash.  */

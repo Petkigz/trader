@@ -67,6 +67,25 @@ export interface AdaptiveParams {
   calmMultiple: number;
 }
 
+/**
+ * Ensemble settings: regime classification plus competition between the trend
+ * and mean-reversion families (`src/strategy/ensemble.ts`).
+ */
+export interface EnsembleParams {
+  /** Trailing bars of virtual history used to rank the families. */
+  scoreWindow: number;
+  /** Softmax temperature; lower = more decisive switching. */
+  temperature: number;
+  /** RSI period for the mean-reversion family. */
+  rsiPeriod: number;
+  /** RSI at or below which a dip is bought. */
+  rsiEntry: number;
+  /** RSI at or above which the reversion is taken. */
+  rsiExit: number;
+  /** Take cash during a volatility storm, regardless of scores. */
+  stormBlocksEntries: boolean;
+}
+
 export interface BotConfig {
   mode: Mode;
   strategy: StrategyName;
@@ -88,6 +107,7 @@ export interface BotConfig {
 
   risk: RiskParams;
   adaptive: AdaptiveParams;
+  ensemble: EnsembleParams;
   trend: TrendParams;
   pullback: PullbackParams;
 
@@ -147,14 +167,14 @@ function oneOf<T extends string>(env: Env, key: string, allowed: readonly T[], f
 
 export function loadConfig(env: Env = process.env): BotConfig {
   const mode = oneOf(env, "BOT_MODE", ["paper", "live"] as const, "paper");
-  const strategy = oneOf(env, "STRATEGY", ["trend", "pullback"] as const, "trend");
+  const strategy = oneOf(env, "STRATEGY", ["trend", "pullback", "meanrev", "ensemble"] as const, "trend");
 
   const cfg: BotConfig = {
     mode,
     strategy,
     exchangeId: "binance",
     symbol: str(env, "SYMBOL", "BTCUSDT").toUpperCase(),
-    interval: strategy === "trend" ? "1d" : "1h",
+    interval: strategy === "pullback" ? "1h" : "1d",
     candleLimit: 1000,
 
     exchange: {
@@ -185,6 +205,15 @@ export function loadConfig(env: Env = process.env): BotConfig {
       stormMultiple: num(env, "STORM_VOL_MULTIPLE", 2),
       stormScale: num(env, "STORM_SCALE", 0.5),
       calmMultiple: num(env, "CALM_VOL_MULTIPLE", 0.7),
+    },
+
+    ensemble: {
+      scoreWindow: num(env, "ENSEMBLE_SCORE_WINDOW", 120),
+      temperature: num(env, "ENSEMBLE_TEMPERATURE", 5),
+      rsiPeriod: num(env, "ENSEMBLE_RSI_PERIOD", 14),
+      rsiEntry: num(env, "ENSEMBLE_RSI_ENTRY", 35),
+      rsiExit: num(env, "ENSEMBLE_RSI_EXIT", 55),
+      stormBlocksEntries: bool(env, "ENSEMBLE_STORM_BLOCKS", true),
     },
 
     trend: {
@@ -253,6 +282,12 @@ export function validate(cfg: BotConfig): void {
   }
   if (cfg.trend.emaPeriod < 20) throw new Error("trend.emaPeriod must be >= 20");
   if (cfg.pullback.rsiPeriod < 2) throw new Error("pullback.rsiPeriod must be >= 2");
+  if (!(cfg.ensemble.scoreWindow >= 10)) throw new Error("ensemble.scoreWindow must be >= 10");
+  if (!(cfg.ensemble.temperature > 0)) throw new Error("ensemble.temperature must be > 0");
+  if (!(cfg.ensemble.rsiEntry > 0 && cfg.ensemble.rsiEntry < cfg.ensemble.rsiExit)) {
+    throw new Error("ensemble.rsiEntry must be below ensemble.rsiExit");
+  }
+  if (cfg.ensemble.rsiExit > 100) throw new Error("ensemble.rsiExit must be <= 100");
   if (cfg.feeRate < 0 || cfg.feeRate > 0.01) throw new Error("feeRate looks wrong (expected 0..0.01)");
 
   if (cfg.mode === "live") {

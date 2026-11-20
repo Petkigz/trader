@@ -12,7 +12,7 @@ export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 
 export type Mode = "paper" | "live";
 
-export type StrategyName = "trend" | "pullback";
+export type StrategyName = "trend" | "pullback" | "meanrev" | "ensemble";
 
 export type ExchangeId = "binance";
 

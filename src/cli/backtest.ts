@@ -16,7 +16,7 @@ import { loadConfig } from "../config.ts";
 import { defaultSymbolInfo, runBacktest, type BacktestResult } from "../backtest.ts";
 import { fetchHistory, intervalMs, syntheticCandles } from "../data.ts";
 import { BinanceHttp, BinanceMarketData } from "../exchange/binance.ts";
-import type { Candle } from "../types.ts";
+import type { Candle, StrategyName } from "../types.ts";
 import { DAY_MS } from "../util/num.ts";
 import { c, pnlColor, signed, table } from "./format.ts";
 
@@ -24,7 +24,7 @@ interface Flags {
   synthetic: boolean;
   years: number;
   capital: number;
-  strategy: "trend" | "pullback";
+  strategy: StrategyName;
   symbol: string;
   csv?: string;
   out: string;
@@ -36,12 +36,17 @@ function parseFlags(argv: string[]): Flags {
     const hit = argv.find((a) => a.startsWith(`--${name}=`));
     return hit ? hit.split("=").slice(1).join("=") : undefined;
   };
-  const strategy = (get("strategy") ?? process.env.STRATEGY ?? "trend") as Flags["strategy"];
+  const raw = (get("strategy") ?? process.env.STRATEGY ?? "trend").toLowerCase();
+  const strategy: StrategyName = (["trend", "pullback", "meanrev", "ensemble"] as const).includes(
+    raw as StrategyName,
+  )
+    ? (raw as StrategyName)
+    : "trend";
   return {
     synthetic: argv.includes("--synthetic"),
     years: Number(get("years") ?? 8),
     capital: Number(get("capital") ?? 10),
-    strategy: strategy === "pullback" ? "pullback" : "trend",
+    strategy,
     symbol: (get("symbol") ?? process.env.SYMBOL ?? "BTCUSDT").toUpperCase(),
     csv: get("csv"),
     out: get("out") ?? "backtest-report.json",
@@ -79,7 +84,7 @@ async function main(): Promise<void> {
   process.env.STRATEGY = flags.strategy;
   process.env.SYMBOL = flags.symbol;
   const cfg = loadConfig({ ...process.env, STRATEGY: flags.strategy, SYMBOL: flags.symbol });
-  const interval = cfg.strategy === "trend" ? "1d" : "1h";
+  const interval = cfg.strategy === "pullback" ? "1h" : "1d";
 
   const info = defaultSymbolInfo(flags.symbol);
   let daily: Candle[] = [];

@@ -475,6 +475,19 @@ One thing worth knowing: the bot reads **minimum notional, lot step, min quantit
 
 See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter sensitivity sweep, and the trailing-stop experiment that I tested and rejected.
 
+### The ensemble: regime switching
+
+```bash
+STRATEGY=ensemble npm run backtest -- --years=8
+```
+
+Classifies the market's volatility and directionality, then lets a trend follower and a
+mean-reversion family compete for control, with cash forced during a volatility storm. The trade
+is owned by one family at a time — letting both families vote on exits turned it into a 193-trade
+churn that lost 42% to fees. Full measurements, including where it loses to plain trend, are in
+[`docs/ENSEMBLE.md`](docs/ENSEMBLE.md). Off by default: on synthetic data it cuts drawdown but
+gives up upside in long bull runs.
+
 ### Adaptive sizing
 
 The bot can change its own exposure in response to market state — volatility targeting, on by
