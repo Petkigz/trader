@@ -236,6 +236,8 @@ For `pullback`, which needs sub-daily ticks, enable `.github/workflows/tick.yml`
 
 Do it in stages. Each stage is one environment variable.
 
+Why this design picks **Binance spot** and **BTCUSDT** over everything else — with live fee, spread, volatility and lot-step measurements behind it, and the conditions that would change the answer — is in [`docs/ASSET.md`](docs/ASSET.md).
+
 ### Check exchange access before you build the habit
 
 Binance lists Uganda as a supported country and it is widely used there, but reports about regional access restrictions conflict and country rules change without notice. **Verify in-account before trusting the bot: log in, complete verification, and manually place one ~$6 BTCUSDT order.** If that works end-to-end, so will the bot.
