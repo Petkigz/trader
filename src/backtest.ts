@@ -51,6 +51,12 @@ export interface BacktestOptions {
   capital: number;
   info: SymbolInfo;
   overlay?: (ctx: OverlayCtx) => OverlayResult;
+  /**
+   * Return every daily equity point instead of the 400-point sample the
+   * dashboard uses. Only research scripts need it — the distribution of daily
+   * dollar changes is the one thing downsampling destroys.
+   */
+  fullCurve?: boolean;
 }
 
 export interface BacktestResult {
@@ -295,7 +301,7 @@ export function runBacktest(opts: BacktestOptions): BacktestResult {
     bestTradePct: pctPnl.length ? round(Math.max(...pctPnl), 2) : 0,
     worstTradePct: pctPnl.length ? round(Math.min(...pctPnl), 2) : 0,
     avgHoldDays: holdDays.length ? round(holdDays.reduce((a, b) => a + b, 0) / holdDays.length, 1) : 0,
-    equityCurve: downsample(equityCurve, 400),
+    equityCurve: opts.fullCurve ? equityCurve : downsample(equityCurve, 400),
     monthly: monthlyReturns(equityCurve),
     // 12 is enough for a dashboard; research on loss distributions needs every
     // trade, so the cap is configurable rather than hard-coded.

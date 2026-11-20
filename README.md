@@ -140,6 +140,28 @@ negotiable is the date. At the **realised** 9.9%/yr — the rate the rule actual
 At the single-asset backtest's 23.3%/yr those become 24 / 13 / 2 years for $1/day and 35 / 24 / 13
 years for $300/month. At 30%/yr: 18 / 9 / 1 and 27 / 18 / 9.
 
+### What "$1/day" looks like day by day
+
+```bash
+npm run daily                    # at $3,636, the capital $1/day needs at 9.9%
+```
+
+"$1/day" is an **average** — $360 a year. Measured on the real rule across 20 assets, 56,338 asset-days, at that capital:
+
+| | |
+|---|---|
+| Days that produced exactly **$0.00** | **59.3%** |
+| Days that gained $1 or more | 19.8% |
+| Days that lost $1 or more | 20.7% |
+| Median day | **$0.00** |
+| 10th–90th percentile day | **−$84 to +$85** (±2.3% of equity) |
+| Longest stretch with no change | **672 days** |
+| Best / worst single day | +$14,105 (DOGE, +388%) / −$1,710 (LINK, −47%) |
+
+So to average $1/day you have to sit through swings of roughly **85× the daily goal**, and three days in five pay nothing at all. It is four jumps a year with long silences between them, not a wage.
+
+**If "$1 every calendar day" is the requirement rather than "$1/day on average", no capital and no setting delivers it** — a trend rule is in cash most of the time by design. Only an instrument that pays continuously can: a 4%/yr deposit yields $1/day on **$9,125**, with certainty and with no upside.
+
 **Does a bigger balance earn a better rate?** Measured, over the same 6.3 years: $10 → $18.17
 (1.82×, 9.9%/yr) and $100 → $185.00 (1.85×, 10.1%/yr). Ten times the capital produced ten times the
 dollars and two-tenths of a point of rate. The only genuine scale effect is friction — a $5 minimum

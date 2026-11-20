@@ -30,7 +30,8 @@
     "fx:edge": "node --experimental-strip-types scripts/fx-edge.ts",
     "target": "node --experimental-strip-types scripts/target.ts",
     "ceiling": "node --experimental-strip-types scripts/ceiling.ts",
-    "schedule": "node --experimental-strip-types scripts/schedule.ts"
+    "schedule": "node --experimental-strip-types scripts/schedule.ts",
+    "daily": "node --experimental-strip-types scripts/daily.ts"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",
