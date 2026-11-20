@@ -54,6 +54,32 @@ Strategy `trend`: EMA200 with a ±0.5% hysteresis band, 25% catastrophic stop, 9
 - A 25% win rate over 40 trades is completely normal for trend following, and it is psychologically brutal. Long flat stretches (2025-11 → 2026-03 in the equity curve is a real example) are the strategy working as designed, not breaking.
 - Fees consumed $2.21 of $52.12 of profit — about 4%. That is the fee-discipline argument for trading rarely.
 
+## Does it still work? Rolling start dates
+
+A single 9-year number hides the fact that most of the edge may have been earned years ago. The same rules, started at different dates, against the current data (through 2026-11-20):
+
+| Started | Trading from | Bot return | Buy & hold | Max DD | Round trips |
+|---|---|---|---|---|---|
+| Aug 2017 (full) | 2018-03-04 | **+521.2%** | +443.4% | 57.1% | 40 |
+| Jan 2023 | 2023-07-19 | **+112.0%** | +108.9% | 34.4% | 16 |
+| Nov 2024 | 2025-06-07 | **−1.2%** | **−41.1%** | 18.4% | 5 |
+
+(Each run spends its first 200 daily bars warming the EMA up, which is why trading starts later than the start date.)
+
+The most recent window is the honest one to stare at: over the last ~1.4 years the strategy is **down 1.2%** while holding BTC would be **down 41%**. It preserved capital, it did not make money.
+
+### State as of 2026-11-20
+
+| | |
+|---|---|
+| Price | $62,240 |
+| EMA200 | $75,472 |
+| Distance | −17.5% |
+| Position | **in cash since 2026-11-05** (exited at $76,088) |
+| Re-entry trigger | daily close above ≈$75,849 |
+
+The bot is flat and will stay flat until BTC reclaims its 200-day average. A new user deploying today should expect **weeks to months of no activity**, which is the correct behaviour in a downtrend and is also the hardest part of running this to sit through.
+
 ## Parameter sensitivity
 
 Parameters in this bot were **chosen from first principles, not optimised**. The sweep below is here to show the result is not perched on a knife edge, not to pick a winner.

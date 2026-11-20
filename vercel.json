@@ -5,6 +5,10 @@
     {
       "path": "/api/tick",
       "schedule": "20 0 * * *"
+    },
+    {
+      "path": "/api/tick",
+      "schedule": "20 6 * * *"
     }
   ],
   "headers": [

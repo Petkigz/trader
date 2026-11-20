@@ -10,6 +10,35 @@ $10  ──►  daily trend filter  ──►  buy / hold / sell  ──►  $62
 
 ---
 
+## Where the market is right now — 20 Nov 2026
+
+Verified against live Binance data on the day this was written:
+
+| | |
+|---|---|
+| BTC price | **$62,240** |
+| All-time high | $124,659 (6 Oct 2025) |
+| Down from ATH | **−50.1%** |
+| Last 30 days | −26.0% |
+| Last 12 months | −28.2% |
+| 200-day EMA | $75,472 |
+| Price vs EMA200 | **−17.5%** |
+
+**If you deploy this today, it will sit in cash and do nothing.**
+
+The bot moved to cash on **5 Nov 2026** at $76,088 and has not re-entered. It will buy again only when the daily close climbs back above **≈$75,849**. Until then every tick logs a hold and the equity line stays flat.
+
+That is the strategy doing its job — it is a bear market and the bot is not buying into it. Over the last ~1.4 years of live-equivalent trading:
+
+| | Bot | Buy & hold |
+|---|---|---|
+| Since Jun 2025 | **−1.2%** | **−41.1%** |
+| Max drawdown | 18.4% | — |
+
+Flat while BTC fell 41%. Whether that reads as success depends entirely on what you expected. **If you need to see activity to believe it is working, this strategy will frustrate you.** Doing nothing is the product.
+
+---
+
 ## Read this first: what it can and cannot do
 
 **It can run unattended indefinitely.** That claim is about *uptime*, and the architecture genuinely delivers it: stateless ticks, self-reconciliation against the exchange, atomic locking, circuit breakers that re-arm instead of dying.
@@ -170,6 +199,8 @@ The bot is designed for a free tier: one daily cron and one Postgres row.
 
 **1. Database.** Create a Supabase project, then run `supabase/migrations/0001_init.sql` in the SQL editor. It creates three tables, an atomic lock function, and RLS with no policies (so only the service key can touch it).
 
+> **Free-tier pause — the biggest operational risk in this design.** Supabase pauses free projects after **7 consecutive days with no database activity**, and a paused project stays dark until you manually restore it. In normal operation the daily tick *is* the keep-alive, so this is safe. But if ticks start failing for a week, the project pauses and everything stops silently. Point a free uptime monitor at `/api/health` — it reads the database, so it keeps the project awake *and* alerts you when a tick is overdue. Do this.
+
 **2. Vercel.** Import this repo, framework preset **Other**, no build command. Then set these environment variables:
 
 | Variable | Value |
@@ -182,15 +213,29 @@ The bot is designed for a free tier: one daily cron and one Postgres row.
 | `SYMBOL` | `BTCUSDT` |
 | `STRATEGY` | `trend` |
 
-**3. Done.** `vercel.json` schedules `/api/tick` daily at 00:20 UTC. Visit `/` for the dashboard, `/api/health` for a monitor-friendly liveness check.
+**3. Done.** `vercel.json` registers two cron entries for `/api/tick`, at 00:20 and 06:20 UTC. Visit `/` for the dashboard, `/api/health` for a monitor-friendly liveness check.
 
-> **Vercel Hobby only allows one cron per day.** That is exactly right for `trend`, which only looks at the daily close. For `pullback`, enable `.github/workflows/tick.yml` (30-minute cadence, free) — it is safe to run both, the lock de-duplicates them.
+Three Vercel behaviours that matter here, all verified for 2026:
+
+- **Hobby crons run at most once per day**, 2 jobs per project maximum. Sub-daily expressions are *rejected at deploy time* rather than silently ignored.
+- **Crons only fire on production deployments.** Deploying a branch as a preview will never tick.
+- **There are no retries.** A failed run is never re-run — which is the entire reason there are two cron entries. The second is a free retry: ticks are idempotent and the Postgres lock de-duplicates, so a second run against the same daily candle is a guaranteed no-op. Hobby also fires *somewhere inside the scheduled hour*, so never assume 00:20 exactly.
+
+For `pullback`, which needs sub-daily ticks, enable `.github/workflows/tick.yml` (free, 30-minute cadence). Running both schedulers is safe and is the recommended self-healing setup.
 
 ---
 
 ## Going live
 
 Do it in stages. Each stage is one environment variable.
+
+### Check exchange access before you build the habit
+
+Binance lists Uganda as a supported country and it is widely used there, but reports about regional access restrictions conflict and country rules change without notice. **Verify in-account before trusting the bot: log in, complete verification, and manually place one ~$6 BTCUSDT order.** If that works end-to-end, so will the bot.
+
+USDT is usually acquired in Uganda through Binance **P2P** (0% Binance fee, MTN Mobile Money / Airtel), then traded against BTC on spot. P2P carries its own 0.5–2% spread from the counterparty — that is a one-time funding cost, not a trading cost.
+
+If Binance is not usable for you, the `Exchange` interface means a different venue is roughly a 150-line adapter and nothing else in the engine changes.
 
 **Stage 1 — paper (default).** Free, no keys, no risk.
 
@@ -307,5 +352,20 @@ test/             90 tests
 - **The pullback strategy is unvalidated** on real data.
 - **A paper-mode dashboard is not evidence of profit.** It is evidence the machinery works.
 - This is not financial advice and there is no guarantee of profit. Trade money you can afford to lose entirely.
+
+## Verified against live sources
+
+Checked on **20 November 2026**:
+
+| Claim | How it was checked | Result |
+|---|---|---|
+| Spot fee 0.1%, 0.075% in BNB (VIP 0) | Binance fee schedule | current → matches `FEE_RATE` |
+| BTCUSDT minimum notional $5.00 | live `/api/v3/exchangeInfo` | exact |
+| BTCUSDT lot step 0.00001, tick 0.01 | live `/api/v3/exchangeInfo` | exact |
+| BTC history through 20 Nov 2026 | live `/api/v3/klines`, 3,383 candles | current |
+| Vercel Hobby: 1 cron/day, 2 jobs, production-only, no retries | Vercel docs | current |
+| Supabase free tier pauses after 7 days idle | Supabase docs | current |
+
+One thing worth knowing: the bot reads **minimum notional, lot step, min quantity and tick size from the exchange at runtime**, every tick. If Binance changes those, the bot adapts without a code change — only a change to the *fee schedule* needs a config edit (`FEE_RATE`). Re-check fees before going live.
 
 See [`docs/BACKTEST.md`](docs/BACKTEST.md) for full methodology, the parameter sensitivity sweep, and the trailing-stop experiment that I tested and rejected.
