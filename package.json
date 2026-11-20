@@ -27,7 +27,8 @@
     "fetch:volume": "node --experimental-strip-types scripts/fetch-volume.ts",
     "deploy:check": "node --experimental-strip-types scripts/deploy-check.ts",
     "venues": "node --experimental-strip-types scripts/venues.ts",
-    "fx:edge": "node --experimental-strip-types scripts/fx-edge.ts"
+    "fx:edge": "node --experimental-strip-types scripts/fx-edge.ts",
+    "target": "node --experimental-strip-types scripts/target.ts"
   },
   "devDependencies": {
     "@types/node": "^22.7.0",

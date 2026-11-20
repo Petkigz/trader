@@ -103,6 +103,25 @@ $10/day is $3,650/year. Divides out to:
 
 The top row is the optimistic one — it assumes eight years of one asset's history repeat, in the best eight years crypto has had. Size from the 10–15% rows instead and treat 30% as the ceiling.
 
+**$300/month is $10/day**, so it is the same table. $1/day is a tenth of it: **$1,200 at 30%, $1,545 at 23.3%**. Run the arithmetic for any target yourself:
+
+```bash
+npm run target                # $30/month, which is $1/day
+npm run target -- --income=300
+```
+
+Read as a *rate*, the target at small capital is not demanding, it is arithmetically impossible — and the constraint is the same at every broker:
+
+| Capital | Return needed for $300/month | vs the strategy's best year on record (+59.8%, 2021) |
+|---|---|---|
+| $10 | 36,000%/yr | **602×** |
+| $100 | 3,600%/yr | **60×** |
+| $1,000 | 360%/yr | **6×** |
+| $3,636 | 99%/yr | 1.7× — needs its best year, every year |
+| $12,180 | 30%/yr | within the measured range |
+
+The largest single month any of the 20 assets has ever had is **+1,074%** (DOGE), which is why the target *feels* reachable — as a one-off event it is not impossible. As a rate sustained every month it is 3,600% a year, and the best the strategy has ever done across 20 assets is 59.8%.
+
 **There is no capital level at which this pays $10 every day.** At $15,665 what you actually get, over one year:
 
 | Outcome | One year | Per day |
