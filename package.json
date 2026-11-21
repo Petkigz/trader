@@ -1,0 +1,43 @@
+{
+  "name": "autopilot-trader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A zero-maintenance, zero-dependency crypto trading bot designed to run unattended on $10 forever.",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "dev": "node scripts/dev-server.ts",
+    "tick": "node --env-file-if-exists=.env src/cli/tick.ts",
+    "backtest": "node --env-file-if-exists=.env src/cli/backtest.ts",
+    "research": "node --env-file-if-exists=.env src/cli/research.ts",
+    "status": "node --env-file-if-exists=.env src/cli/status.ts",
+    "lock": "node --env-file-if-exists=.env src/cli/halt.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts",
+    "verify": "npm run typecheck && npm test && npm run deploy:check",
+    "xsection": "node --experimental-strip-types scripts/xsection.ts",
+    "xsmom": "node --experimental-strip-types scripts/xsmom.ts",
+    "challenger": "node --experimental-strip-types scripts/challenger.ts",
+    "catchup": "node --experimental-strip-types scripts/catchup.ts",
+    "recover": "node --experimental-strip-types scripts/recover.ts",
+    "growth": "node --experimental-strip-types scripts/growth.ts",
+    "context": "node --experimental-strip-types scripts/context.ts",
+    "fetch:volume": "node --experimental-strip-types scripts/fetch-volume.ts",
+    "deploy:check": "node --experimental-strip-types scripts/deploy-check.ts",
+    "venues": "node --experimental-strip-types scripts/venues.ts",
+    "fx:edge": "node --experimental-strip-types scripts/fx-edge.ts",
+    "target": "node --experimental-strip-types scripts/target.ts",
+    "ceiling": "node --experimental-strip-types scripts/ceiling.ts",
+    "schedule": "node --experimental-strip-types scripts/schedule.ts",
+    "daily": "node --experimental-strip-types scripts/daily.ts",
+    "income": "node --experimental-strip-types scripts/income.ts",
+    "required": "node --experimental-strip-types scripts/required.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,48 @@
+# Optional second heartbeat.
+#
+# Vercel's Hobby plan only allows one cron per day. That is fine for the default
+# `trend` strategy, which trades a handful of times per year. If you switch to
+# the hourly `pullback` strategy, enable this workflow for a 30-minute cadence:
+#
+#   1. Repo -> Settings -> Secrets and variables -> Actions
+#   2. BOT_URL      = https://<your-project>.vercel.app
+#   3. CRON_SECRET  = the same value you set in Vercel
+#
+# Running both schedulers is safe: the bot takes a Postgres lock, so whichever
+# fires second is a no-op. It is also self-healing — if one scheduler dies, the
+# other keeps the bot alive.
+
+name: tick
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    if: ${{ secrets.BOT_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger one tick
+        env:
+          BOT_URL: ${{ secrets.BOT_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/tick.json -w '%{http_code}' \
+            --max-time 120 --retry 2 --retry-delay 5 \
+            -X POST "$BOT_URL/api/tick" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H 'Content-Type: application/json')
+          echo "HTTP $code"
+          cat /tmp/tick.json || true
+          if [ "$code" -ge 500 ]; then
+            echo "tick failed with $code" >&2
+            exit 1
+          fi
